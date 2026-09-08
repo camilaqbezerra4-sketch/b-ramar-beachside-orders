@@ -553,6 +553,7 @@ function AbaResultados() {
           p.origem,
           garcons.find((g) => g.id === p.garcom_id)?.nome ?? "",
           p.status,
+          p.pago ? "sim" : "nao",
           (p.total - p.gorjeta).toFixed(2),
           p.gorjeta.toFixed(2),
           p.total.toFixed(2),
