@@ -277,7 +277,7 @@ function PainelPage() {
                   pedido={p}
                   numeroMesa={nomeMesa(p.mesa_id)}
                   garcom={nomeGarcom(p.garcom_id)}
-                  destaque={novos.includes(p.id)}
+                  destaque={emAlerta.includes(p.id)}
                 />
               ))}
               {ordenados.length === 0 && (
