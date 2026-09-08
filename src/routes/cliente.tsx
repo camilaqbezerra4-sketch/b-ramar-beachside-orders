@@ -3,20 +3,29 @@ import { useEffect, useMemo, useState } from "react";
 import QRCode from "qrcode";
 import { AppHeader } from "@/components/AppHeader";
 import { SuporteWhatsApp } from "@/components/SuporteWhatsApp";
-import { criarPedido, formatarReal, useDados } from "@/lib/store";
+import {
+  assinarFila,
+  criarPedido,
+  formatarReal,
+  pedidosPendentes,
+  useDados,
+} from "@/lib/store";
 import { gerarCodigoPix } from "@/lib/pix";
 import { CATEGORIAS, type Categoria } from "@/lib/types";
 
 export const Route = createFileRoute("/cliente")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    mesa: search.mesa != null ? Number(search.mesa) : undefined,
+  }),
   head: () => ({
     meta: [
-      { title: "Cardápio da Mesa 14 — BóraMar" },
+      { title: "Cardápio da Mesa — BóraMar" },
       {
         name: "description",
         content:
           "Peça bebidas e porções direto da sua mesa e pague no Pix, sem taxa nenhuma.",
       },
-      { property: "og:title", content: "Cardápio da Mesa 14 — BóraMar" },
+      { property: "og:title", content: "Cardápio da Mesa — BóraMar" },
       {
         property: "og:description",
         content: "Peça da sua espreguiçadeira e pague no Pix.",
@@ -29,16 +38,17 @@ export const Route = createFileRoute("/cliente")({
 const NUMERO_MESA_DEMO = 14;
 
 function ClientePage() {
+  const { mesa: mesaBuscada } = Route.useSearch();
   const dados = useDados();
   const { barraca, produtos, garcons } = dados;
-  const mesa = dados.mesas.find((m) => m.numero === NUMERO_MESA_DEMO) ??
+  const numeroDesejado = mesaBuscada ?? NUMERO_MESA_DEMO;
+  const mesa = dados.mesas.find((m) => m.numero === numeroDesejado) ??
     dados.mesas[0] ?? {
       id: "",
       barraca_id: "",
-      numero: NUMERO_MESA_DEMO,
+      numero: numeroDesejado,
       tem_qrcode: false,
     };
-
 
   const [etapa, setEtapa] = useState<"cardapio" | "checkout" | "pix" | "fim">(
     "cardapio",
@@ -50,6 +60,15 @@ function ClientePage() {
   const [garcomId, setGarcomId] = useState<string>("");
   const [copiado, setCopiado] = useState(false);
   const [qr, setQr] = useState<string>("");
+  const [pedidoId, setPedidoId] = useState("");
+  const [enviando, setEnviando] = useState(false);
+  const [pendente, setPendente] = useState(false);
+  const [erroGarcom, setErroGarcom] = useState(false);
+
+  // acompanha a fila de reenvio para tirar o aviso "Enviando…" quando entrar
+  const [, forcar] = useState(0);
+  useEffect(() => assinarFila(() => forcar((n) => n + 1)), []);
+  const aindaNaFila = pendente && pedidosPendentes() > 0;
 
   const linhas = useMemo(
     () =>
@@ -72,15 +91,15 @@ function ClientePage() {
       gerarCodigoPix({
         chave: barraca.chave_pix,
         nome: barraca.nome,
-        cidade: "RECIFE",
+        cidade: barraca.cidade,
         valor: totalGeral,
-        identificador: `MESA${mesa.numero}`,
+        txid: pedidoId,
       }),
-    [barraca, totalGeral, mesa.numero],
+    [barraca, totalGeral, pedidoId],
   );
 
   useEffect(() => {
-    if (etapa !== "pix") return;
+    if (etapa !== "pix" || !codigoPix) return;
     let ativo = true;
     QRCode.toDataURL(codigoPix, { width: 320, margin: 1 }).then((url) => {
       if (ativo) setQr(url);
@@ -99,22 +118,25 @@ function ClientePage() {
       return novo;
     });
 
-  async function enviarPedido() {
-    try {
-      await criarPedido({
-        mesa_id: mesa.id,
-        garcom_id: garcomId || null,
-        origem: "cliente",
-        gorjeta,
-        pago: false,
-        linhas,
-      });
-      setEtapa("fim");
-      setCarrinho({});
-    } catch (e) {
-      console.error(e);
-      alert("Não deu para enviar o pedido agora. Tente de novo.");
+  async function irParaPix() {
+    if (gorjeta > 0 && !garcomId) {
+      setErroGarcom(true);
+      return;
     }
+    setErroGarcom(false);
+    setEnviando(true);
+    const r = await criarPedido({
+      mesa_id: mesa.id,
+      garcom_id: garcomId || null,
+      origem: "cliente",
+      gorjeta,
+      pago: false,
+      linhas,
+    });
+    setPedidoId(r.id);
+    setPendente(r.pendente);
+    setEnviando(false);
+    setEtapa("pix");
   }
 
   if (!dados.pronto) {
@@ -129,7 +151,6 @@ function ClientePage() {
   }
 
   return (
-
     <div className="min-h-screen pb-32">
       <AppHeader subtitulo={`Mesa ${mesa.numero}`} />
 
@@ -262,6 +283,7 @@ function ClientePage() {
                 onClick={() => {
                   setGorjeta(v);
                   setOutroValor("");
+                  if (v === 0) setErroGarcom(false);
                 }}
                 className={`btn-base border-2 ${
                   gorjeta === v && outroValor === ""
@@ -285,12 +307,22 @@ function ClientePage() {
             />
           </div>
 
-          <h2 className="mt-6 text-2xl font-extrabold">Quem te atendeu?</h2>
+          <h2 className="mt-6 text-2xl font-extrabold">
+            Quem te atendeu?
+            {gorjeta > 0 && (
+              <span className="ml-2 text-lg font-bold text-destructive">
+                obrigatório com caixinha
+              </span>
+            )}
+          </h2>
           <div className="mt-3 flex flex-wrap gap-2">
             {garcons.map((g) => (
               <button
                 key={g.id}
-                onClick={() => setGarcomId(g.id === garcomId ? "" : g.id)}
+                onClick={() => {
+                  setGarcomId(g.id === garcomId ? "" : g.id);
+                  setErroGarcom(false);
+                }}
                 className={`btn-base border-2 ${
                   garcomId === g.id
                     ? "border-primary bg-primary text-primary-foreground"
@@ -301,6 +333,12 @@ function ClientePage() {
               </button>
             ))}
           </div>
+          {erroGarcom && (
+            <p className="mt-2 text-lg font-bold text-destructive">
+              Escolha quem te atendeu para deixar a caixinha, ou toque em “Sem
+              caixinha”.
+            </p>
+          )}
 
           <div className="card-praia mt-6 p-4 text-lg">
             <div className="flex justify-between">
@@ -328,10 +366,11 @@ function ClientePage() {
               Voltar
             </button>
             <button
-              onClick={() => setEtapa("pix")}
+              onClick={irParaPix}
+              disabled={enviando}
               className="btn-base flex-1 bg-primary text-primary-foreground"
             >
-              Pagar com Pix
+              {enviando ? "Enviando…" : "Pagar com Pix"}
             </button>
           </div>
         </main>
@@ -344,6 +383,13 @@ function ClientePage() {
             Mesa {mesa.numero} · Total{" "}
             <strong>{formatarReal(totalGeral)}</strong>
           </p>
+
+          {aindaNaFila && (
+            <p className="card-praia mt-3 p-3 text-lg font-bold">
+              Enviando… a internet caiu, mas seu pedido está guardado e vai
+              sozinho assim que o sinal voltar.
+            </p>
+          )}
 
           <div className="card-praia mt-4 flex flex-col items-center gap-3 p-5">
             {qr ? (
@@ -371,7 +417,10 @@ function ClientePage() {
           </div>
 
           <button
-            onClick={enviarPedido}
+            onClick={() => {
+              setEtapa("fim");
+              setCarrinho({});
+            }}
             className="btn-base mt-5 w-full bg-success py-5 text-xl text-success-foreground"
           >
             Já paguei, enviar pedido para a cozinha
@@ -397,11 +446,19 @@ function ClientePage() {
             A barraca vai conferir o Pix e começar o preparo. Fica tranquilo na
             cadeira da Mesa {mesa.numero}.
           </p>
+          {aindaNaFila && (
+            <p className="mt-3 text-lg font-bold">
+              Enviando… seu pedido está guardado e segue automaticamente quando
+              o sinal voltar.
+            </p>
+          )}
           <button
             onClick={() => {
               setEtapa("cardapio");
               setGorjeta(5);
               setOutroValor("");
+              setPedidoId("");
+              setPendente(false);
             }}
             className="btn-base mt-6 bg-primary text-primary-foreground"
           >
