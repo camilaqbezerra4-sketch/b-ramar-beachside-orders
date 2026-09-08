@@ -39,6 +39,7 @@ function Index() {
         <div className="mt-8 grid gap-4">
           <Link
             to="/cliente"
+            search={{ mesa: 14 }}
             className="btn-base card-praia flex-col items-start gap-1 bg-accent px-5 py-6 text-left text-accent-foreground"
           >
             <span className="text-2xl font-extrabold">Entrar como Cliente</span>
