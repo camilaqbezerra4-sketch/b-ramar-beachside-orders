@@ -493,9 +493,11 @@ function AbaResultados() {
   const [dias, setDias] = useState(7);
 
   const resumo = (lista: Pedido[]) => {
+    // Só entra no faturamento o pedido com pagamento confirmado pela cozinha.
+    const pagos = lista.filter((p) => p.pago);
     const comQr: Pedido[] = [];
     const semQr: Pedido[] = [];
-    for (const p of lista) {
+    for (const p of pagos) {
       const mesa = mesas.find((m) => m.id === p.mesa_id);
       (mesa?.tem_qrcode ? comQr : semQr).push(p);
     }
@@ -507,7 +509,16 @@ function AbaResultados() {
         ticket: l.length ? faturamento / l.length : 0,
       };
     };
-    return { comQr: calc(comQr), semQr: calc(semQr), total: calc(lista) };
+    const naoPagos = lista.filter((p) => !p.pago);
+    return {
+      comQr: calc(comQr),
+      semQr: calc(semQr),
+      total: calc(pagos),
+      aguardando: {
+        pedidos: naoPagos.length,
+        valor: naoPagos.reduce((s, p) => s + p.total - p.gorjeta, 0),
+      },
+    };
   };
 
   const hoje = new Date().toDateString();
