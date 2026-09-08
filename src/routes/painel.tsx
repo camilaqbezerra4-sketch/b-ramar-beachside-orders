@@ -41,13 +41,28 @@ const ABAS: Array<{ id: Aba; rotulo: string }> = [
   { id: "resultados", rotulo: "Resultados" },
 ];
 
-function tocarSino() {
+// ---- Som (precisa de um toque do usuário para o navegador liberar) ----
+let ctxAudio: AudioContext | null = null;
+
+function liberarAudio() {
   try {
     const Ctx =
       window.AudioContext ??
       (window as unknown as { webkitAudioContext: typeof AudioContext })
         .webkitAudioContext;
-    const ctx = new Ctx();
+    ctxAudio = ctxAudio ?? new Ctx();
+    if (ctxAudio.state === "suspended") ctxAudio.resume();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function tocarSino() {
+  const ctx = ctxAudio;
+  if (!ctx) return;
+  try {
+    if (ctx.state === "suspended") ctx.resume();
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.type = "sine";
@@ -64,13 +79,86 @@ function tocarSino() {
   }
 }
 
+// ---- PIN do painel, lembrado por 30 dias neste aparelho ----
+const CHAVE_PIN = "boramar:painel-liberado-ate";
+
+function painelLiberado() {
+  if (typeof window === "undefined") return false;
+  const ate = Number(localStorage.getItem(CHAVE_PIN) ?? 0);
+  return Number.isFinite(ate) && ate > Date.now();
+}
+
+function guardarLiberacao() {
+  localStorage.setItem(CHAVE_PIN, String(Date.now() + 30 * 86400000));
+}
+
+function TelaPin({ pin, aoLiberar }: { pin: string; aoLiberar: () => void }) {
+  const [valor, setValor] = useState("");
+  const [erro, setErro] = useState(false);
+
+  return (
+    <div className="min-h-screen">
+      <AppHeader subtitulo="Painel" />
+      <main className="mx-auto max-w-3xl px-4 pt-8">
+        <h1 className="text-3xl font-extrabold">Painel da Barraca</h1>
+        <p className="mt-2 text-lg text-muted-foreground">
+          Digite o PIN da barraca. Este aparelho fica lembrado por 30 dias.
+        </p>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (valor === pin && pin) {
+              guardarLiberacao();
+              aoLiberar();
+            } else {
+              setErro(true);
+            }
+          }}
+          className="mt-5 grid gap-3"
+        >
+          <input
+            autoFocus
+            inputMode="numeric"
+            maxLength={6}
+            value={valor}
+            onChange={(e) => {
+              setValor(e.target.value.replace(/\D/g, ""));
+              setErro(false);
+            }}
+            aria-label="PIN do painel"
+            placeholder="••••"
+            className="w-full rounded-2xl border-2 border-border bg-card px-4 py-4 text-center text-3xl font-extrabold tracking-widest"
+          />
+          {erro && (
+            <p className="text-lg font-bold text-destructive">
+              PIN incorreto. Tente de novo.
+            </p>
+          )}
+          <button className="btn-base bg-primary text-primary-foreground">
+            Entrar no painel
+          </button>
+          <Link to="/" className="btn-base border-2 border-border bg-card">
+            Voltar ao início
+          </Link>
+        </form>
+      </main>
+    </div>
+  );
+}
+
 function PainelPage() {
   const dados = useDados();
   const { barraca, mesas, garcons, produtos, pedidos } = dados;
   const [aba, setAba] = useState<Aba>("pedidos");
   const [lancando, setLancando] = useState(false);
   const [novos, setNovos] = useState<string[]>([]);
+  const [somAtivo, setSomAtivo] = useState(false);
+  const [liberado, setLiberado] = useState(false);
   const conhecidos = useRef<string[] | null>(null);
+
+  useEffect(() => {
+    setLiberado(painelLiberado());
+  }, []);
 
   useEffect(() => {
     const ids = pedidos.map((p) => p.id);
@@ -82,13 +170,21 @@ function PainelPage() {
     conhecidos.current = ids;
     if (chegaram.length) {
       tocarSino();
-      setNovos((n) => [...n, ...chegaram]);
-      setTimeout(
-        () => setNovos((n) => n.filter((id) => !chegaram.includes(id))),
-        6000,
-      );
+      setNovos((n) => [...new Set([...n, ...chegaram])]);
     }
   }, [pedidos]);
+
+  // pedidos que ainda pedem atenção: chegaram e o pagamento não foi confirmado
+  const emAlerta = useMemo(
+    () => novos.filter((id) => pedidos.some((p) => p.id === id && !p.pago)),
+    [novos, pedidos],
+  );
+
+  useEffect(() => {
+    if (emAlerta.length === 0) return;
+    const t = setInterval(() => tocarSino(), 30000);
+    return () => clearInterval(t);
+  }, [emAlerta.length]);
 
   const ordenados = useMemo(
     () =>
@@ -112,10 +208,36 @@ function PainelPage() {
     );
   }
 
+  if (!liberado) {
+    return <TelaPin pin={barraca.pin} aoLiberar={() => setLiberado(true)} />;
+  }
+
   return (
 
     <div className="min-h-screen pb-28">
       <AppHeader subtitulo="Painel" />
+
+      {!somAtivo && (
+        <div className="sticky top-[60px] z-40 border-b-2 border-border bg-accent px-4 py-3 text-accent-foreground">
+          <div className="mx-auto flex max-w-3xl flex-wrap items-center gap-3">
+            <p className="flex-1 text-lg font-extrabold">
+              Som desativado: você não vai ouvir os pedidos novos.
+            </p>
+            <button
+              onClick={() => {
+                if (liberarAudio()) {
+                  tocarSino();
+                  setSomAtivo(true);
+                }
+              }}
+              className="btn-base bg-primary px-6 py-4 text-xl text-primary-foreground"
+            >
+              Ativar som
+            </button>
+          </div>
+        </div>
+      )}
+
 
       <div className="sticky top-[60px] z-30 border-b-2 border-border bg-background">
         <div className="mx-auto flex max-w-3xl gap-2 overflow-x-auto px-4 py-3">
@@ -155,7 +277,7 @@ function PainelPage() {
                   pedido={p}
                   numeroMesa={nomeMesa(p.mesa_id)}
                   garcom={nomeGarcom(p.garcom_id)}
-                  destaque={novos.includes(p.id)}
+                  destaque={emAlerta.includes(p.id)}
                 />
               ))}
               {ordenados.length === 0 && (
@@ -336,6 +458,12 @@ function AbaMesas() {
       <p className="mt-1 text-base text-muted-foreground">
         Marque quais mesas já têm a plaquinha com QR Code.
       </p>
+      <Link
+        to="/qrcodes"
+        className="btn-base mt-4 inline-flex bg-accent text-accent-foreground"
+      >
+        Gerar QR Codes
+      </Link>
       <div className="mt-4 grid gap-3">
         {[...mesas]
           .sort((a, b) => a.numero - b.numero)
@@ -365,9 +493,11 @@ function AbaResultados() {
   const [dias, setDias] = useState(7);
 
   const resumo = (lista: Pedido[]) => {
+    // Só entra no faturamento o pedido com pagamento confirmado pela cozinha.
+    const pagos = lista.filter((p) => p.pago);
     const comQr: Pedido[] = [];
     const semQr: Pedido[] = [];
-    for (const p of lista) {
+    for (const p of pagos) {
       const mesa = mesas.find((m) => m.id === p.mesa_id);
       (mesa?.tem_qrcode ? comQr : semQr).push(p);
     }
@@ -379,7 +509,16 @@ function AbaResultados() {
         ticket: l.length ? faturamento / l.length : 0,
       };
     };
-    return { comQr: calc(comQr), semQr: calc(semQr), total: calc(lista) };
+    const naoPagos = lista.filter((p) => !p.pago);
+    return {
+      comQr: calc(comQr),
+      semQr: calc(semQr),
+      total: calc(pagos),
+      aguardando: {
+        pedidos: naoPagos.length,
+        valor: naoPagos.reduce((s, p) => s + p.total - p.gorjeta, 0),
+      },
+    };
   };
 
   const hoje = new Date().toDateString();
@@ -403,7 +542,7 @@ function AbaResultados() {
 
   function exportarCsv() {
     const linhas = [
-      ["Pedido", "Data", "Mesa", "QR Code", "Origem", "Garçom", "Status", "Consumo", "Caixinha", "Total"],
+      ["Pedido", "Data", "Mesa", "QR Code", "Origem", "Garçom", "Status", "Pago", "Consumo", "Caixinha", "Total"],
       ...doPeriodo.map((p) => {
         const mesa = mesas.find((m) => m.id === p.mesa_id);
         return [
@@ -414,6 +553,7 @@ function AbaResultados() {
           p.origem,
           garcons.find((g) => g.id === p.garcom_id)?.nome ?? "",
           p.status,
+          p.pago ? "sim" : "nao",
           (p.total - p.gorjeta).toFixed(2),
           p.gorjeta.toFixed(2),
           p.total.toFixed(2),
@@ -480,13 +620,12 @@ function Bloco({
   r,
 }: {
   titulo: string;
-  r: ReturnType<
-    (lista: Pedido[]) => {
-      comQr: { pedidos: number; faturamento: number; ticket: number };
-      semQr: { pedidos: number; faturamento: number; ticket: number };
-      total: { pedidos: number; faturamento: number; ticket: number };
-    }
-  >;
+  r: {
+    comQr: { pedidos: number; faturamento: number; ticket: number };
+    semQr: { pedidos: number; faturamento: number; ticket: number };
+    total: { pedidos: number; faturamento: number; ticket: number };
+    aguardando: { pedidos: number; valor: number };
+  };
 }) {
   const Linha = ({
     rotulo,
@@ -517,6 +656,17 @@ function Bloco({
       <Linha rotulo="Total da barraca" v={r.total} />
       <Linha rotulo="Mesas com QR Code" v={r.comQr} />
       <Linha rotulo="Mesas sem QR Code" v={r.semQr} />
+      <div className="card-praia p-4">
+        <p className="text-lg font-extrabold">Aguardando confirmação</p>
+        <div className="mt-1 flex flex-wrap gap-x-6 text-lg">
+          <span>
+            Pedidos <strong>{r.aguardando.pedidos}</strong>
+          </span>
+          <span>
+            Valor <strong>{formatarReal(r.aguardando.valor)}</strong>
+          </span>
+        </div>
+      </div>
     </section>
   );
 }
@@ -627,7 +777,7 @@ function LancarPedido({ aoFechar }: { aoFechar: () => void }) {
           <button
             disabled={linhas.length === 0}
             onClick={() => {
-              criarPedido({
+              void criarPedido({
                 mesa_id: mesaId,
                 garcom_id: garcomId || null,
                 origem: "garcom",
