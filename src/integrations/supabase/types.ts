@@ -14,7 +14,256 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      barracas: {
+        Row: {
+          chave_pix: string
+          criado_em: string
+          id: string
+          nome: string
+          updated_at: string
+          whatsapp_suporte: string
+        }
+        Insert: {
+          chave_pix?: string
+          criado_em?: string
+          id?: string
+          nome: string
+          updated_at?: string
+          whatsapp_suporte?: string
+        }
+        Update: {
+          chave_pix?: string
+          criado_em?: string
+          id?: string
+          nome?: string
+          updated_at?: string
+          whatsapp_suporte?: string
+        }
+        Relationships: []
+      }
+      garcons: {
+        Row: {
+          barraca_id: string
+          chave_pix: string
+          criado_em: string
+          id: string
+          nome: string
+          updated_at: string
+        }
+        Insert: {
+          barraca_id: string
+          chave_pix?: string
+          criado_em?: string
+          id?: string
+          nome: string
+          updated_at?: string
+        }
+        Update: {
+          barraca_id?: string
+          chave_pix?: string
+          criado_em?: string
+          id?: string
+          nome?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "garcons_barraca_id_fkey"
+            columns: ["barraca_id"]
+            isOneToOne: false
+            referencedRelation: "barracas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      itens_pedido: {
+        Row: {
+          criado_em: string
+          id: string
+          nome_produto: string
+          pedido_id: string
+          preco: number
+          produto_id: string | null
+          quantidade: number
+          updated_at: string
+        }
+        Insert: {
+          criado_em?: string
+          id?: string
+          nome_produto: string
+          pedido_id: string
+          preco?: number
+          produto_id?: string | null
+          quantidade?: number
+          updated_at?: string
+        }
+        Update: {
+          criado_em?: string
+          id?: string
+          nome_produto?: string
+          pedido_id?: string
+          preco?: number
+          produto_id?: string | null
+          quantidade?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "itens_pedido_pedido_id_fkey"
+            columns: ["pedido_id"]
+            isOneToOne: false
+            referencedRelation: "pedidos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "itens_pedido_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mesas: {
+        Row: {
+          barraca_id: string
+          criado_em: string
+          id: string
+          numero: number
+          tem_qrcode: boolean
+          updated_at: string
+        }
+        Insert: {
+          barraca_id: string
+          criado_em?: string
+          id?: string
+          numero: number
+          tem_qrcode?: boolean
+          updated_at?: string
+        }
+        Update: {
+          barraca_id?: string
+          criado_em?: string
+          id?: string
+          numero?: number
+          tem_qrcode?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mesas_barraca_id_fkey"
+            columns: ["barraca_id"]
+            isOneToOne: false
+            referencedRelation: "barracas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pedidos: {
+        Row: {
+          barraca_id: string
+          criado_em: string
+          garcom_id: string | null
+          gorjeta: number
+          id: string
+          mesa_id: string
+          origem: string
+          pago: boolean
+          status: string
+          total: number
+          updated_at: string
+        }
+        Insert: {
+          barraca_id: string
+          criado_em?: string
+          garcom_id?: string | null
+          gorjeta?: number
+          id?: string
+          mesa_id: string
+          origem?: string
+          pago?: boolean
+          status?: string
+          total?: number
+          updated_at?: string
+        }
+        Update: {
+          barraca_id?: string
+          criado_em?: string
+          garcom_id?: string | null
+          gorjeta?: number
+          id?: string
+          mesa_id?: string
+          origem?: string
+          pago?: boolean
+          status?: string
+          total?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pedidos_barraca_id_fkey"
+            columns: ["barraca_id"]
+            isOneToOne: false
+            referencedRelation: "barracas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pedidos_garcom_id_fkey"
+            columns: ["garcom_id"]
+            isOneToOne: false
+            referencedRelation: "garcons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pedidos_mesa_id_fkey"
+            columns: ["mesa_id"]
+            isOneToOne: false
+            referencedRelation: "mesas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      produtos: {
+        Row: {
+          barraca_id: string
+          categoria: string
+          criado_em: string
+          disponivel: boolean
+          id: string
+          nome: string
+          preco: number
+          updated_at: string
+        }
+        Insert: {
+          barraca_id: string
+          categoria?: string
+          criado_em?: string
+          disponivel?: boolean
+          id?: string
+          nome: string
+          preco?: number
+          updated_at?: string
+        }
+        Update: {
+          barraca_id?: string
+          categoria?: string
+          criado_em?: string
+          disponivel?: boolean
+          id?: string
+          nome?: string
+          preco?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "produtos_barraca_id_fkey"
+            columns: ["barraca_id"]
+            isOneToOne: false
+            referencedRelation: "barracas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

@@ -31,8 +31,14 @@ const NUMERO_MESA_DEMO = 14;
 function ClientePage() {
   const dados = useDados();
   const { barraca, produtos, garcons } = dados;
-  const mesa =
-    dados.mesas.find((m) => m.numero === NUMERO_MESA_DEMO) ?? dados.mesas[0]!;
+  const mesa = dados.mesas.find((m) => m.numero === NUMERO_MESA_DEMO) ??
+    dados.mesas[0] ?? {
+      id: "",
+      barraca_id: "",
+      numero: NUMERO_MESA_DEMO,
+      tem_qrcode: false,
+    };
+
 
   const [etapa, setEtapa] = useState<"cardapio" | "checkout" | "pix" | "fim">(
     "cardapio",
@@ -93,20 +99,37 @@ function ClientePage() {
       return novo;
     });
 
-  function enviarPedido() {
-    criarPedido({
-      mesa_id: mesa.id,
-      garcom_id: garcomId || null,
-      origem: "cliente",
-      gorjeta,
-      pago: false,
-      linhas,
-    });
-    setEtapa("fim");
-    setCarrinho({});
+  async function enviarPedido() {
+    try {
+      await criarPedido({
+        mesa_id: mesa.id,
+        garcom_id: garcomId || null,
+        origem: "cliente",
+        gorjeta,
+        pago: false,
+        linhas,
+      });
+      setEtapa("fim");
+      setCarrinho({});
+    } catch (e) {
+      console.error(e);
+      alert("Não deu para enviar o pedido agora. Tente de novo.");
+    }
+  }
+
+  if (!dados.pronto) {
+    return (
+      <div className="min-h-screen">
+        <AppHeader subtitulo="Carregando" />
+        <p className="mx-auto max-w-3xl px-4 pt-8 text-xl font-bold">
+          Carregando o cardápio…
+        </p>
+      </div>
+    );
   }
 
   return (
+
     <div className="min-h-screen pb-32">
       <AppHeader subtitulo={`Mesa ${mesa.numero}`} />
 

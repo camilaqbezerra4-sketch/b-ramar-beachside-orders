@@ -1,6 +1,8 @@
 import { useSyncExternalStore } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import type {
   Barraca,
+  Categoria,
   Garcom,
   ItemPedido,
   Mesa,
@@ -10,15 +12,12 @@ import type {
 } from "./types";
 
 /**
- * Camada de dados do BóraMar.
- *
- * Hoje: memória (dados de exemplo) para a interface de teste.
- * Depois: substituir as funções abaixo por chamadas ao Supabase
- * (tabelas barracas, mesas, garcons, produtos, pedidos, itens_pedido)
- * mantendo exatamente os mesmos nomes de campos.
+ * Camada de dados do BóraMar — Supabase + Realtime.
+ * Tabelas: barracas, mesas, garcons, produtos, pedidos, itens_pedido.
  */
 
 export interface DadosBarraca {
+  pronto: boolean;
   barraca: Barraca;
   mesas: Mesa[];
   garcons: Garcom[];
@@ -26,204 +25,247 @@ export interface DadosBarraca {
   pedidos: Pedido[];
 }
 
-let seq = 0;
-const novoId = (prefixo: string) => `${prefixo}_${++seq}`;
+const barracaVazia: Barraca = {
+  id: "",
+  nome: "",
+  chave_pix: "",
+  whatsapp_suporte: "",
+  criado_em: new Date().toISOString(),
+};
 
-let estado: DadosBarraca | null = null;
+let estado: DadosBarraca = {
+  pronto: false,
+  barraca: barracaVazia,
+  mesas: [],
+  garcons: [],
+  produtos: [],
+  pedidos: [],
+};
+
 const ouvintes = new Set<() => void>();
-
-function agora(offsetMin = 0) {
-  return new Date(Date.now() - offsetMin * 60000).toISOString();
-}
-
-function semear(): DadosBarraca {
-  const barracaId = "barraca_exemplo";
-  const barraca: Barraca = {
-    id: barracaId,
-    nome: "Barraca do Zé — Praia de Boa Viagem",
-    chave_pix: "boramar@barracadoze.com.br",
-    whatsapp_suporte: "5581999990000",
-    criado_em: agora(60 * 24 * 30),
-  };
-
-  const mesas: Mesa[] = Array.from({ length: 12 }, (_, i) => ({
-    id: novoId("mesa"),
-    barraca_id: barracaId,
-    numero: i + 8,
-    tem_qrcode: [10, 12, 14, 15, 16, 18].includes(i + 8),
-  }));
-
-  const garcons: Garcom[] = [
-    { nome: "Rafa", chave_pix: "rafa@pix.com" },
-    { nome: "Dedé", chave_pix: "81988887777" },
-    { nome: "Jussara", chave_pix: "jussara@pix.com" },
-  ].map((g) => ({ id: novoId("garcom"), barraca_id: barracaId, ...g }));
-
-  const produtos: Produto[] = (
-    [
-      ["Água de Coco", "Bebidas", 10, true],
-      ["Caipirinha", "Bebidas", 22, true],
-      ["Cerveja Long Neck", "Bebidas", 12, true],
-      ["Refrigerante Lata", "Bebidas", 8, true],
-      ["Isca de Peixe", "Porções", 65, true],
-      ["Batata Frita", "Porções", 35, true],
-      ["Camarão Alho e Óleo", "Porções", 89, false],
-      ["Açaí na Tigela", "Sobremesas", 24, true],
-      ["Picolé de Coco", "Sobremesas", 9, false],
-    ] as const
-  ).map(([nome, categoria, preco, disponivel]) => ({
-    id: novoId("produto"),
-    barraca_id: barracaId,
-    nome,
-    categoria,
-    preco,
-    disponivel,
-  }));
-
-  const mesaDe = (numero: number) => mesas.find((m) => m.numero === numero)!;
-  const prod = (nome: string) => produtos.find((p) => p.nome === nome)!;
-
-  function pedidoExemplo(
-    numeroMesa: number,
-    origem: Pedido["origem"],
-    status: StatusPedido,
-    gorjeta: number,
-    minutosAtras: number,
-    garcomIdx: number | null,
-    linhas: Array<[string, number]>,
-  ): Pedido {
-    const pedidoId = novoId("pedido");
-    const itens: ItemPedido[] = linhas.map(([nome, quantidade]) => {
-      const p = prod(nome);
-      return {
-        id: novoId("item"),
-        pedido_id: pedidoId,
-        produto_id: p.id,
-        nome_produto: p.nome,
-        quantidade,
-        preco: p.preco,
-      };
-    });
-    return {
-      id: pedidoId,
-      barraca_id: barracaId,
-      mesa_id: mesaDe(numeroMesa).id,
-      garcom_id: garcomIdx === null ? null : garcons[garcomIdx]!.id,
-      origem,
-      status,
-      pago: status !== "novo",
-      total: itens.reduce((s, i) => s + i.preco * i.quantidade, 0) + gorjeta,
-      gorjeta,
-      criado_em: agora(minutosAtras),
-      itens,
-    };
-  }
-
-  const pedidos: Pedido[] = [
-    pedidoExemplo(14, "cliente", "entregue", 5, 95, 0, [
-      ["Água de Coco", 2],
-      ["Batata Frita", 1],
-    ]),
-    pedidoExemplo(9, "garcom", "em_preparo", 0, 40, 1, [
-      ["Isca de Peixe", 1],
-      ["Cerveja Long Neck", 4],
-    ]),
-    pedidoExemplo(12, "cliente", "novo", 10, 6, 2, [
-      ["Caipirinha", 2],
-      ["Açaí na Tigela", 1],
-    ]),
-  ];
-
-  return { barraca, mesas, garcons, produtos, pedidos };
-}
-
-function db(): DadosBarraca {
-  if (!estado) estado = semear();
-  return estado;
-}
-
 function avisar() {
   for (const fn of ouvintes) fn();
 }
-
-function subscribe(fn: () => void) {
-  ouvintes.add(fn);
-  return () => ouvintes.delete(fn);
+function definir(patch: Partial<DadosBarraca>) {
+  estado = { ...estado, ...patch };
+  avisar();
 }
 
+let iniciado = false;
+let carregando: Promise<void> | null = null;
+
+async function carregar() {
+  const { data: barracas } = await supabase
+    .from("barracas")
+    .select("*")
+    .order("criado_em", { ascending: true })
+    .limit(1);
+  const barraca = barracas?.[0];
+  if (!barraca) return;
+
+  const [mesas, garcons, produtos, pedidos, itens] = await Promise.all([
+    supabase
+      .from("mesas")
+      .select("*")
+      .eq("barraca_id", barraca.id)
+      .order("numero"),
+    supabase
+      .from("garcons")
+      .select("*")
+      .eq("barraca_id", barraca.id)
+      .order("nome"),
+    supabase
+      .from("produtos")
+      .select("*")
+      .eq("barraca_id", barraca.id)
+      .order("nome"),
+    supabase
+      .from("pedidos")
+      .select("*")
+      .eq("barraca_id", barraca.id)
+      .order("criado_em", { ascending: true }),
+    supabase.from("itens_pedido").select("*"),
+  ]);
+
+  const porPedido = new Map<string, ItemPedido[]>();
+  for (const i of itens.data ?? []) {
+    const lista = porPedido.get(i.pedido_id) ?? [];
+    lista.push({
+      id: i.id,
+      pedido_id: i.pedido_id,
+      produto_id: i.produto_id ?? "",
+      nome_produto: i.nome_produto,
+      quantidade: i.quantidade,
+      preco: Number(i.preco),
+    });
+    porPedido.set(i.pedido_id, lista);
+  }
+
+  definir({
+    pronto: true,
+    barraca: {
+      id: barraca.id,
+      nome: barraca.nome,
+      chave_pix: barraca.chave_pix,
+      whatsapp_suporte: barraca.whatsapp_suporte,
+      criado_em: barraca.criado_em,
+    },
+    mesas: (mesas.data ?? []).map((m) => ({
+      id: m.id,
+      barraca_id: m.barraca_id,
+      numero: m.numero,
+      tem_qrcode: m.tem_qrcode,
+    })),
+    garcons: (garcons.data ?? []).map((g) => ({
+      id: g.id,
+      barraca_id: g.barraca_id,
+      nome: g.nome,
+      chave_pix: g.chave_pix,
+    })),
+    produtos: (produtos.data ?? []).map((p) => ({
+      id: p.id,
+      barraca_id: p.barraca_id,
+      nome: p.nome,
+      categoria: p.categoria as Categoria,
+      preco: Number(p.preco),
+      disponivel: p.disponivel,
+    })),
+    pedidos: (pedidos.data ?? []).map((p) => ({
+      id: p.id,
+      barraca_id: p.barraca_id,
+      mesa_id: p.mesa_id,
+      garcom_id: p.garcom_id,
+      origem: p.origem as Pedido["origem"],
+      status: p.status as StatusPedido,
+      pago: p.pago,
+      total: Number(p.total),
+      gorjeta: Number(p.gorjeta),
+      criado_em: p.criado_em,
+      itens: porPedido.get(p.id) ?? [],
+    })),
+  });
+}
+
+function recarregar() {
+  carregando = carregar().catch((e) => {
+    console.error("BóraMar: falha ao carregar dados", e);
+  });
+  return carregando;
+}
+
+function iniciar() {
+  if (iniciado || typeof window === "undefined") return;
+  iniciado = true;
+  recarregar();
+  supabase
+    .channel("boramar")
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "pedidos" },
+      () => recarregar(),
+    )
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "itens_pedido" },
+      () => recarregar(),
+    )
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "produtos" },
+      () => recarregar(),
+    )
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "mesas" },
+      () => recarregar(),
+    )
+    .subscribe();
+}
+
+function subscribe(fn: () => void) {
+  iniciar();
+  ouvintes.add(fn);
+  return () => {
+    ouvintes.delete(fn);
+  };
+}
+
+const snapshot = () => estado;
+
 export function useDados(): DadosBarraca {
-  return useSyncExternalStore(subscribe, db, db);
+  return useSyncExternalStore(subscribe, snapshot, snapshot);
 }
 
 // ---- Ações ----
 
-export function criarPedido(input: {
+export async function criarPedido(input: {
   mesa_id: string;
   garcom_id: string | null;
   origem: Pedido["origem"];
   gorjeta: number;
   pago: boolean;
   linhas: Array<{ produto: Produto; quantidade: number }>;
-}): Pedido {
-  const dados = db();
-  const pedidoId = novoId("pedido");
-  const itens: ItemPedido[] = input.linhas.map(({ produto, quantidade }) => ({
-    id: novoId("item"),
-    pedido_id: pedidoId,
-    produto_id: produto.id,
-    nome_produto: produto.nome,
-    quantidade,
-    preco: produto.preco,
-  }));
-  const pedido: Pedido = {
-    id: pedidoId,
-    barraca_id: dados.barraca.id,
-    mesa_id: input.mesa_id,
-    garcom_id: input.garcom_id,
-    origem: input.origem,
-    status: "novo",
-    pago: input.pago,
-    total:
-      itens.reduce((s, i) => s + i.preco * i.quantidade, 0) + input.gorjeta,
-    gorjeta: input.gorjeta,
-    criado_em: new Date().toISOString(),
-    itens,
-  };
-  dados.pedidos = [...dados.pedidos, pedido];
-  avisar();
-  return pedido;
+}) {
+  const total =
+    input.linhas.reduce((s, l) => s + l.produto.preco * l.quantidade, 0) +
+    input.gorjeta;
+
+  const { data, error } = await supabase
+    .from("pedidos")
+    .insert({
+      barraca_id: estado.barraca.id,
+      mesa_id: input.mesa_id,
+      garcom_id: input.garcom_id,
+      origem: input.origem,
+      status: "novo",
+      pago: input.pago,
+      total,
+      gorjeta: input.gorjeta,
+    })
+    .select()
+    .single();
+  if (error || !data) throw error;
+
+  const { error: erroItens } = await supabase.from("itens_pedido").insert(
+    input.linhas.map((l) => ({
+      pedido_id: data.id,
+      produto_id: l.produto.id,
+      nome_produto: l.produto.nome,
+      quantidade: l.quantidade,
+      preco: l.produto.preco,
+    })),
+  );
+  if (erroItens) throw erroItens;
+
+  await recarregar();
 }
 
-export function atualizarStatus(pedidoId: string, status: StatusPedido) {
-  const dados = db();
-  dados.pedidos = dados.pedidos.map((p) =>
-    p.id === pedidoId ? { ...p, status } : p,
-  );
-  avisar();
+export async function atualizarStatus(pedidoId: string, status: StatusPedido) {
+  await supabase.from("pedidos").update({ status }).eq("id", pedidoId);
+  await recarregar();
 }
 
-export function confirmarPagamento(pedidoId: string) {
-  const dados = db();
-  dados.pedidos = dados.pedidos.map((p) =>
-    p.id === pedidoId ? { ...p, pago: true } : p,
-  );
-  avisar();
+export async function confirmarPagamento(pedidoId: string) {
+  await supabase.from("pedidos").update({ pago: true }).eq("id", pedidoId);
+  await recarregar();
 }
 
-export function atualizarProduto(produtoId: string, patch: Partial<Produto>) {
-  const dados = db();
-  dados.produtos = dados.produtos.map((p) =>
-    p.id === produtoId ? { ...p, ...patch } : p,
-  );
-  avisar();
+export async function atualizarProduto(
+  produtoId: string,
+  patch: Partial<Produto>,
+) {
+  await supabase.from("produtos").update(patch).eq("id", produtoId);
+  await recarregar();
 }
 
-export function alternarQrCodeMesa(mesaId: string) {
-  const dados = db();
-  dados.mesas = dados.mesas.map((m) =>
-    m.id === mesaId ? { ...m, tem_qrcode: !m.tem_qrcode } : m,
-  );
-  avisar();
+export async function alternarQrCodeMesa(mesaId: string) {
+  const mesa = estado.mesas.find((m) => m.id === mesaId);
+  if (!mesa) return;
+  await supabase
+    .from("mesas")
+    .update({ tem_qrcode: !mesa.tem_qrcode })
+    .eq("id", mesaId);
+  await recarregar();
 }
 
 export const formatarReal = (v: number) =>

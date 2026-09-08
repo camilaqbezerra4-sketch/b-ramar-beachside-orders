@@ -101,7 +101,19 @@ function PainelPage() {
   const nomeGarcom = (id: string | null) =>
     garcons.find((g) => g.id === id)?.nome ?? "—";
 
+  if (!dados.pronto) {
+    return (
+      <div className="min-h-screen">
+        <AppHeader subtitulo="Painel" />
+        <p className="mx-auto max-w-3xl px-4 pt-8 text-xl font-bold">
+          Carregando os pedidos…
+        </p>
+      </div>
+    );
+  }
+
   return (
+
     <div className="min-h-screen pb-28">
       <AppHeader subtitulo="Painel" />
 
