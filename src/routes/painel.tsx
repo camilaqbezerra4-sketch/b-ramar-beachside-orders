@@ -777,7 +777,7 @@ function LancarPedido({ aoFechar }: { aoFechar: () => void }) {
           <button
             disabled={linhas.length === 0}
             onClick={() => {
-              criarPedido({
+              void criarPedido({
                 mesa_id: mesaId,
                 garcom_id: garcomId || null,
                 origem: "garcom",
