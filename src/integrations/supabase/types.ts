@@ -17,25 +17,31 @@ export type Database = {
       barracas: {
         Row: {
           chave_pix: string
+          cidade: string
           criado_em: string
           id: string
           nome: string
+          pin: string
           updated_at: string
           whatsapp_suporte: string
         }
         Insert: {
           chave_pix?: string
+          cidade?: string
           criado_em?: string
           id?: string
           nome: string
+          pin?: string
           updated_at?: string
           whatsapp_suporte?: string
         }
         Update: {
           chave_pix?: string
+          cidade?: string
           criado_em?: string
           id?: string
           nome?: string
+          pin?: string
           updated_at?: string
           whatsapp_suporte?: string
         }
