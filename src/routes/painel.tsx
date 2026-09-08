@@ -542,7 +542,7 @@ function AbaResultados() {
 
   function exportarCsv() {
     const linhas = [
-      ["Pedido", "Data", "Mesa", "QR Code", "Origem", "Garçom", "Status", "Consumo", "Caixinha", "Total"],
+      ["Pedido", "Data", "Mesa", "QR Code", "Origem", "Garçom", "Status", "Pago", "Consumo", "Caixinha", "Total"],
       ...doPeriodo.map((p) => {
         const mesa = mesas.find((m) => m.id === p.mesa_id);
         return [
