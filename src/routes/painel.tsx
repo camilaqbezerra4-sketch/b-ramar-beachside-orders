@@ -208,10 +208,36 @@ function PainelPage() {
     );
   }
 
+  if (!liberado) {
+    return <TelaPin pin={barraca.pin} aoLiberar={() => setLiberado(true)} />;
+  }
+
   return (
 
     <div className="min-h-screen pb-28">
       <AppHeader subtitulo="Painel" />
+
+      {!somAtivo && (
+        <div className="sticky top-[60px] z-40 border-b-2 border-border bg-accent px-4 py-3 text-accent-foreground">
+          <div className="mx-auto flex max-w-3xl flex-wrap items-center gap-3">
+            <p className="flex-1 text-lg font-extrabold">
+              Som desativado: você não vai ouvir os pedidos novos.
+            </p>
+            <button
+              onClick={() => {
+                if (liberarAudio()) {
+                  tocarSino();
+                  setSomAtivo(true);
+                }
+              }}
+              className="btn-base bg-primary px-6 py-4 text-xl text-primary-foreground"
+            >
+              Ativar som
+            </button>
+          </div>
+        </div>
+      )}
+
 
       <div className="sticky top-[60px] z-30 border-b-2 border-border bg-background">
         <div className="mx-auto flex max-w-3xl gap-2 overflow-x-auto px-4 py-3">
