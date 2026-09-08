@@ -458,6 +458,12 @@ function AbaMesas() {
       <p className="mt-1 text-base text-muted-foreground">
         Marque quais mesas já têm a plaquinha com QR Code.
       </p>
+      <Link
+        to="/qrcodes"
+        className="btn-base mt-4 inline-flex bg-accent text-accent-foreground"
+      >
+        Gerar QR Codes
+      </Link>
       <div className="mt-4 grid gap-3">
         {[...mesas]
           .sort((a, b) => a.numero - b.numero)
