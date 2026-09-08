@@ -109,6 +109,8 @@ async function carregar() {
       id: barraca.id,
       nome: barraca.nome,
       chave_pix: barraca.chave_pix,
+      cidade: (barraca as { cidade?: string }).cidade ?? "Recife",
+      pin: (barraca as { pin?: string }).pin ?? "",
       whatsapp_suporte: barraca.whatsapp_suporte,
       criado_em: barraca.criado_em,
     },
