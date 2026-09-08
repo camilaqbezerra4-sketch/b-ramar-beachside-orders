@@ -202,6 +202,101 @@ export function useDados(): DadosBarraca {
 
 // ---- Ações ----
 
+interface PedidoPendente {
+  pedido: {
+    id: string;
+    barraca_id: string;
+    mesa_id: string;
+    garcom_id: string | null;
+    origem: Pedido["origem"];
+    status: StatusPedido;
+    pago: boolean;
+    total: number;
+    gorjeta: number;
+  };
+  itens: Array<{
+    id: string;
+    pedido_id: string;
+    produto_id: string;
+    nome_produto: string;
+    quantidade: number;
+    preco: number;
+  }>;
+}
+
+const CHAVE_FILA = "boramar:pedidos-pendentes";
+
+function lerFila(): PedidoPendente[] {
+  if (typeof window === "undefined") return [];
+  try {
+    return JSON.parse(localStorage.getItem(CHAVE_FILA) ?? "[]");
+  } catch {
+    return [];
+  }
+}
+function gravarFila(fila: PedidoPendente[]) {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(CHAVE_FILA, JSON.stringify(fila));
+  for (const fn of ouvintesFila) fn();
+}
+
+const ouvintesFila = new Set<() => void>();
+export function assinarFila(fn: () => void) {
+  ouvintesFila.add(fn);
+  return () => {
+    ouvintesFila.delete(fn);
+  };
+}
+export function pedidosPendentes() {
+  return lerFila().length;
+}
+
+function novoId() {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto)
+    return crypto.randomUUID();
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+/** Envia um pedido; idempotente — reenviar o mesmo id nunca duplica. */
+async function enviarPedido(p: PedidoPendente) {
+  const { error } = await supabase
+    .from("pedidos")
+    .upsert(p.pedido, { onConflict: "id", ignoreDuplicates: true });
+  if (error) throw error;
+  const { error: erroItens } = await supabase
+    .from("itens_pedido")
+    .upsert(p.itens, { onConflict: "id", ignoreDuplicates: true });
+  if (erroItens) throw erroItens;
+}
+
+let tentando = false;
+export async function reenviarPendentes() {
+  if (tentando) return;
+  tentando = true;
+  try {
+    for (const p of lerFila()) {
+      try {
+        await enviarPedido(p);
+        gravarFila(lerFila().filter((x) => x.pedido.id !== p.pedido.id));
+      } catch {
+        break; // ainda sem rede: tenta de novo depois
+      }
+    }
+    if (lerFila().length === 0) await recarregar();
+  } finally {
+    tentando = false;
+  }
+}
+
+if (typeof window !== "undefined") {
+  window.addEventListener("online", () => {
+    reenviarPendentes();
+  });
+  setInterval(() => {
+    if (lerFila().length) reenviarPendentes();
+  }, 8000);
+}
+
 export async function criarPedido(input: {
   mesa_id: string;
   garcom_id: string | null;
@@ -209,14 +304,15 @@ export async function criarPedido(input: {
   gorjeta: number;
   pago: boolean;
   linhas: Array<{ produto: Produto; quantidade: number }>;
-}) {
+}): Promise<{ id: string; pendente: boolean }> {
   const total =
     input.linhas.reduce((s, l) => s + l.produto.preco * l.quantidade, 0) +
     input.gorjeta;
 
-  const { data, error } = await supabase
-    .from("pedidos")
-    .insert({
+  const id = novoId();
+  const pacote: PedidoPendente = {
+    pedido: {
+      id,
       barraca_id: estado.barraca.id,
       mesa_id: input.mesa_id,
       garcom_id: input.garcom_id,
@@ -225,23 +321,27 @@ export async function criarPedido(input: {
       pago: input.pago,
       total,
       gorjeta: input.gorjeta,
-    })
-    .select()
-    .single();
-  if (error || !data) throw error;
-
-  const { error: erroItens } = await supabase.from("itens_pedido").insert(
-    input.linhas.map((l) => ({
-      pedido_id: data.id,
+    },
+    itens: input.linhas.map((l) => ({
+      id: novoId(),
+      pedido_id: id,
       produto_id: l.produto.id,
       nome_produto: l.produto.nome,
       quantidade: l.quantidade,
       preco: l.produto.preco,
     })),
-  );
-  if (erroItens) throw erroItens;
+  };
 
-  await recarregar();
+  try {
+    await enviarPedido(pacote);
+    await recarregar();
+    return { id, pendente: false };
+  } catch (e) {
+    console.error("BóraMar: pedido guardado para reenvio", e);
+    gravarFila([...lerFila(), pacote]);
+    reenviarPendentes();
+    return { id, pendente: true };
+  }
 }
 
 export async function atualizarStatus(pedidoId: string, status: StatusPedido) {
