@@ -656,6 +656,17 @@ function Bloco({
       <Linha rotulo="Total da barraca" v={r.total} />
       <Linha rotulo="Mesas com QR Code" v={r.comQr} />
       <Linha rotulo="Mesas sem QR Code" v={r.semQr} />
+      <div className="card-praia p-4">
+        <p className="text-lg font-extrabold">Aguardando confirmação</p>
+        <div className="mt-1 flex flex-wrap gap-x-6 text-lg">
+          <span>
+            Pedidos <strong>{r.aguardando.pedidos}</strong>
+          </span>
+          <span>
+            Valor <strong>{formatarReal(r.aguardando.valor)}</strong>
+          </span>
+        </div>
+      </div>
     </section>
   );
 }
