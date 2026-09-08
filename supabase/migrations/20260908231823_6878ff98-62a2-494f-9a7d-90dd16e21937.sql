@@ -1,0 +1,3 @@
+ALTER TABLE public.barracas
+  ADD COLUMN IF NOT EXISTS cidade text NOT NULL DEFAULT 'Recife',
+  ADD COLUMN IF NOT EXISTS pin text NOT NULL DEFAULT '1234';
