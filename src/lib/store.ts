@@ -29,6 +29,8 @@ const barracaVazia: Barraca = {
   id: "",
   nome: "",
   chave_pix: "",
+  cidade: "",
+  pin: "",
   whatsapp_suporte: "",
   criado_em: new Date().toISOString(),
 };
