@@ -31,8 +31,14 @@ const NUMERO_MESA_DEMO = 14;
 function ClientePage() {
   const dados = useDados();
   const { barraca, produtos, garcons } = dados;
-  const mesa =
-    dados.mesas.find((m) => m.numero === NUMERO_MESA_DEMO) ?? dados.mesas[0]!;
+  const mesa = dados.mesas.find((m) => m.numero === NUMERO_MESA_DEMO) ??
+    dados.mesas[0] ?? {
+      id: "",
+      barraca_id: "",
+      numero: NUMERO_MESA_DEMO,
+      tem_qrcode: false,
+    };
+
 
   const [etapa, setEtapa] = useState<"cardapio" | "checkout" | "pix" | "fim">(
     "cardapio",
