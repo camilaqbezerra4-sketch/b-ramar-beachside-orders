@@ -620,13 +620,12 @@ function Bloco({
   r,
 }: {
   titulo: string;
-  r: ReturnType<
-    (lista: Pedido[]) => {
-      comQr: { pedidos: number; faturamento: number; ticket: number };
-      semQr: { pedidos: number; faturamento: number; ticket: number };
-      total: { pedidos: number; faturamento: number; ticket: number };
-    }
-  >;
+  r: {
+    comQr: { pedidos: number; faturamento: number; ticket: number };
+    semQr: { pedidos: number; faturamento: number; ticket: number };
+    total: { pedidos: number; faturamento: number; ticket: number };
+    aguardando: { pedidos: number; valor: number };
+  };
 }) {
   const Linha = ({
     rotulo,
