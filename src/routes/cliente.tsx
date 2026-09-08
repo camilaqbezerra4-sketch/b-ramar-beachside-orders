@@ -14,9 +14,11 @@ import { gerarCodigoPix } from "@/lib/pix";
 import { CATEGORIAS, type Categoria } from "@/lib/types";
 
 export const Route = createFileRoute("/cliente")({
-  validateSearch: (search: Record<string, unknown>) => ({
-    mesa: search.mesa != null ? Number(search.mesa) : undefined,
-  }),
+  validateSearch: (search: Record<string, unknown>): { mesa?: number } => {
+    const bruto = search["mesa"];
+    const n = bruto != null ? Number(bruto) : NaN;
+    return Number.isFinite(n) ? { mesa: n } : {};
+  },
   head: () => ({
     meta: [
       { title: "Cardápio da Mesa — BóraMar" },
