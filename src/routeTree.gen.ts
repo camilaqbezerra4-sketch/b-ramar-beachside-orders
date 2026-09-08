@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ClienteRouteImport } from './routes/cliente'
 import { Route as PainelRouteImport } from './routes/painel'
+import { Route as QrcodesRouteImport } from './routes/qrcodes'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -28,35 +29,44 @@ const PainelRoute = PainelRouteImport.update({
   path: '/painel',
   getParentRoute: () => rootRouteImport,
 } as any)
+const QrcodesRoute = QrcodesRouteImport.update({
+  id: '/qrcodes',
+  path: '/qrcodes',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/cliente': typeof ClienteRoute
   '/painel': typeof PainelRoute
+  '/qrcodes': typeof QrcodesRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/cliente': typeof ClienteRoute
   '/painel': typeof PainelRoute
+  '/qrcodes': typeof QrcodesRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/cliente': typeof ClienteRoute
   '/painel': typeof PainelRoute
+  '/qrcodes': typeof QrcodesRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/cliente' | '/painel'
+  fullPaths: '/' | '/cliente' | '/painel' | '/qrcodes'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/cliente' | '/painel'
-  id: '__root__' | '/' | '/cliente' | '/painel'
+  to: '/' | '/cliente' | '/painel' | '/qrcodes'
+  id: '__root__' | '/' | '/cliente' | '/painel' | '/qrcodes'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ClienteRoute: typeof ClienteRoute
   PainelRoute: typeof PainelRoute
+  QrcodesRoute: typeof QrcodesRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -82,6 +92,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PainelRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/qrcodes': {
+      id: '/qrcodes'
+      path: '/qrcodes'
+      fullPath: '/qrcodes'
+      preLoaderRoute: typeof QrcodesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -89,6 +106,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ClienteRoute: ClienteRoute,
   PainelRoute: PainelRoute,
+  QrcodesRoute: QrcodesRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

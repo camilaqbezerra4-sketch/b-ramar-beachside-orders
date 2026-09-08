@@ -41,13 +41,28 @@ const ABAS: Array<{ id: Aba; rotulo: string }> = [
   { id: "resultados", rotulo: "Resultados" },
 ];
 
-function tocarSino() {
+// ---- Som (precisa de um toque do usuário para o navegador liberar) ----
+let ctxAudio: AudioContext | null = null;
+
+function liberarAudio() {
   try {
     const Ctx =
       window.AudioContext ??
       (window as unknown as { webkitAudioContext: typeof AudioContext })
         .webkitAudioContext;
-    const ctx = new Ctx();
+    ctxAudio = ctxAudio ?? new Ctx();
+    if (ctxAudio.state === "suspended") ctxAudio.resume();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function tocarSino() {
+  const ctx = ctxAudio;
+  if (!ctx) return;
+  try {
+    if (ctx.state === "suspended") ctx.resume();
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.type = "sine";
@@ -64,13 +79,86 @@ function tocarSino() {
   }
 }
 
+// ---- PIN do painel, lembrado por 30 dias neste aparelho ----
+const CHAVE_PIN = "boramar:painel-liberado-ate";
+
+function painelLiberado() {
+  if (typeof window === "undefined") return false;
+  const ate = Number(localStorage.getItem(CHAVE_PIN) ?? 0);
+  return Number.isFinite(ate) && ate > Date.now();
+}
+
+function guardarLiberacao() {
+  localStorage.setItem(CHAVE_PIN, String(Date.now() + 30 * 86400000));
+}
+
+function TelaPin({ pin, aoLiberar }: { pin: string; aoLiberar: () => void }) {
+  const [valor, setValor] = useState("");
+  const [erro, setErro] = useState(false);
+
+  return (
+    <div className="min-h-screen">
+      <AppHeader subtitulo="Painel" />
+      <main className="mx-auto max-w-3xl px-4 pt-8">
+        <h1 className="text-3xl font-extrabold">Painel da Barraca</h1>
+        <p className="mt-2 text-lg text-muted-foreground">
+          Digite o PIN da barraca. Este aparelho fica lembrado por 30 dias.
+        </p>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (valor === pin && pin) {
+              guardarLiberacao();
+              aoLiberar();
+            } else {
+              setErro(true);
+            }
+          }}
+          className="mt-5 grid gap-3"
+        >
+          <input
+            autoFocus
+            inputMode="numeric"
+            maxLength={6}
+            value={valor}
+            onChange={(e) => {
+              setValor(e.target.value.replace(/\D/g, ""));
+              setErro(false);
+            }}
+            aria-label="PIN do painel"
+            placeholder="••••"
+            className="w-full rounded-2xl border-2 border-border bg-card px-4 py-4 text-center text-3xl font-extrabold tracking-widest"
+          />
+          {erro && (
+            <p className="text-lg font-bold text-destructive">
+              PIN incorreto. Tente de novo.
+            </p>
+          )}
+          <button className="btn-base bg-primary text-primary-foreground">
+            Entrar no painel
+          </button>
+          <Link to="/" className="btn-base border-2 border-border bg-card">
+            Voltar ao início
+          </Link>
+        </form>
+      </main>
+    </div>
+  );
+}
+
 function PainelPage() {
   const dados = useDados();
   const { barraca, mesas, garcons, produtos, pedidos } = dados;
   const [aba, setAba] = useState<Aba>("pedidos");
   const [lancando, setLancando] = useState(false);
   const [novos, setNovos] = useState<string[]>([]);
+  const [somAtivo, setSomAtivo] = useState(false);
+  const [liberado, setLiberado] = useState(false);
   const conhecidos = useRef<string[] | null>(null);
+
+  useEffect(() => {
+    setLiberado(painelLiberado());
+  }, []);
 
   useEffect(() => {
     const ids = pedidos.map((p) => p.id);
@@ -82,13 +170,21 @@ function PainelPage() {
     conhecidos.current = ids;
     if (chegaram.length) {
       tocarSino();
-      setNovos((n) => [...n, ...chegaram]);
-      setTimeout(
-        () => setNovos((n) => n.filter((id) => !chegaram.includes(id))),
-        6000,
-      );
+      setNovos((n) => [...new Set([...n, ...chegaram])]);
     }
   }, [pedidos]);
+
+  // pedidos que ainda pedem atenção: chegaram e o pagamento não foi confirmado
+  const emAlerta = useMemo(
+    () => novos.filter((id) => pedidos.some((p) => p.id === id && !p.pago)),
+    [novos, pedidos],
+  );
+
+  useEffect(() => {
+    if (emAlerta.length === 0) return;
+    const t = setInterval(() => tocarSino(), 30000);
+    return () => clearInterval(t);
+  }, [emAlerta.length]);
 
   const ordenados = useMemo(
     () =>
