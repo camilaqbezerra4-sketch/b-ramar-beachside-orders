@@ -395,16 +395,24 @@ function PainelPage() {
               </button>
             </div>
             <p className="mt-1 text-base text-muted-foreground">
-              {pendentesCaixa.length} pedido(s) aguardando confirmação do Pix.
-              Depois de 10 minutos o pedido expira sozinho.
+              {pendentesCaixa.length} pedido(s) aguardando confirmação do
+              pagamento. Depois de 10 minutos o pedido expira sozinho.
             </p>
 
             <div className="mt-4 grid gap-3">
               {pendentesCaixa.map((p) => (
                 <article key={p.id} className="card-praia p-4">
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
-                    <h2 className="text-2xl font-extrabold">
+                    <h2 className="flex flex-wrap items-center gap-2 text-2xl font-extrabold">
                       Mesa {nomeMesa(p.mesa_id)}
+                      <MarcadorGrupo
+                        novo={abreGrupo(p, pedidos, liberacoes)}
+                      />
+                      {p.forma_pagamento === "cartao" && (
+                        <span className="rounded-full bg-accent px-3 py-1 text-sm font-extrabold text-accent-foreground">
+                          aguardando cartão
+                        </span>
+                      )}
                     </h2>
                     <span className="text-base text-muted-foreground">
                       há {minutosDesde(p.criado_em)} min · Garçom:{" "}
@@ -424,7 +432,9 @@ function PainelPage() {
                       onClick={() => confirmarPagamento(p.id)}
                       className="btn-base bg-success text-success-foreground"
                     >
-                      Confirmar pagamento
+                      {p.forma_pagamento === "cartao"
+                        ? "Recebi no cartão"
+                        : "Confirmar pagamento"}
                     </button>
                     <button
                       onClick={() => encerrarPedido(p.id, "cancelado")}
@@ -435,6 +445,7 @@ function PainelPage() {
                   </div>
                 </article>
               ))}
+
               {pendentesCaixa.length === 0 && (
                 <p className="text-lg text-muted-foreground">
                   Nenhum pedido aguardando pagamento.
