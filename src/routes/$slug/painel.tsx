@@ -1193,3 +1193,80 @@ function LancarPedido({ aoFechar }: { aoFechar: () => void }) {
     </div>
   );
 }
+
+const PERGUNTAS: Array<[string, string]> = [
+  [
+    "Não escuto o som dos pedidos",
+    "O celular só libera o som depois de um toque. Abra a aba Cozinha e toque no botão grande 'Ativar som'. Deixe a tela da Cozinha aberta e o volume do aparelho no alto. Se trocar de aparelho ou recarregar a página, toque em 'Ativar som' de novo.",
+  ],
+  [
+    "O cliente disse que pagou e não apareceu no Caixa",
+    "O pedido só aparece no Caixa depois que o cliente termina o pedido no celular dele. Peça para ele conferir se apertou o botão de enviar. Se o sinal estava fraco, o pedido fica guardado no celular e entra sozinho quando a internet voltar. Confira o comprovante do Pix antes de confirmar.",
+  ],
+  [
+    "Como confirmo o pagamento",
+    "Na aba Caixa, veja o pedido da mesa, confira o valor no seu aplicativo do banco e toque em 'Confirmar pagamento'. Só depois disso o pedido aparece na Cozinha. Se o cliente desistiu, toque em 'Cancelar'.",
+  ],
+  [
+    "Como marco que um item acabou",
+    "Vá na aba Cardápio e desligue o item na chavinha 'Disponível'. Ele some do cardápio do cliente na hora. Quando chegar mais, é só ligar de novo.",
+  ],
+  [
+    "Esqueci o PIN",
+    "O PIN fica com o responsável pelo cadastro da barraca, na área de administração. Fale com a gente pelo WhatsApp aqui embaixo que reenviamos ou trocamos o PIN.",
+  ],
+  [
+    "O celular está sem sinal",
+    "Os pedidos feitos pelos clientes ficam guardados no aparelho deles e são enviados sozinhos quando a internet voltar, sem repetir pedido. No painel, quando o sinal voltar, a tela se atualiza sozinha. Se demorar, feche e abra a página de novo.",
+  ],
+  [
+    "Como imprimo os QR Codes de novo",
+    "Vá na aba Mesas e toque em 'Gerar QR Codes'. Abre uma página pronta para impressão, com quatro mesas por folha. Use a opção de imprimir do navegador.",
+  ],
+  [
+    "Como adiciono um garçom",
+    "Na aba Equipe, escreva o nome e a chave Pix do garçom e toque em adicionar. Ele passa a aparecer para o cliente escolher na hora da caixinha. Para tirar alguém, toque em remover.",
+  ],
+];
+
+function AbaAjuda({ whatsapp }: { whatsapp: string }) {
+  const [aberta, setAberta] = useState<number | null>(null);
+
+  return (
+    <section>
+      <h1 className="text-3xl font-extrabold">Ajuda</h1>
+      <p className="mt-1 text-base text-muted-foreground">
+        Toque na pergunta para ver a resposta.
+      </p>
+
+      <div className="mt-4 grid gap-3">
+        {PERGUNTAS.map(([pergunta, resposta], i) => (
+          <article key={pergunta} className="card-praia p-4">
+            <button
+              onClick={() => setAberta(aberta === i ? null : i)}
+              aria-expanded={aberta === i}
+              className="flex w-full items-center justify-between gap-3 text-left text-xl font-extrabold"
+            >
+              {pergunta}
+              <span aria-hidden>{aberta === i ? "−" : "+"}</span>
+            </button>
+            {aberta === i && (
+              <p className="mt-3 text-lg leading-relaxed">{resposta}</p>
+            )}
+          </article>
+        ))}
+      </div>
+
+      {whatsapp && (
+        <a
+          href={`https://wa.me/${whatsapp.replace(/\D/g, "")}`}
+          target="_blank"
+          rel="noreferrer"
+          className="btn-base mt-6 inline-flex bg-success px-6 py-5 text-xl text-success-foreground"
+        >
+          Não resolveu? Fala com a gente
+        </a>
+      )}
+    </section>
+  );
+}
