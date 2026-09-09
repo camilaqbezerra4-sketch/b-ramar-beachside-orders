@@ -8,6 +8,7 @@ import {
   atualizarStatus,
   confirmarPagamento,
   criarPedido,
+  encerrarPedido,
   formatarReal,
   useDados,
 } from "@/lib/store";
@@ -20,7 +21,7 @@ export const Route = createFileRoute("/painel")({
       {
         name: "description",
         content:
-          "Pedidos em tempo real, cardápio, mesas e resultados do dia da barraca.",
+          "Caixa, cozinha, cardápio, mesas e resultados do dia da barraca.",
       },
       { property: "og:title", content: "Painel da Barraca — BóraMar" },
       {
@@ -32,14 +33,17 @@ export const Route = createFileRoute("/painel")({
   component: PainelPage,
 });
 
-type Aba = "pedidos" | "cardapio" | "mesas" | "resultados";
+type Aba =
+  | "caixa"
+  | "cozinha"
+  | "cardapio"
+  | "mesas"
+  | "resultados"
+  | "pendencias";
 
-const ABAS: Array<{ id: Aba; rotulo: string }> = [
-  { id: "pedidos", rotulo: "Pedidos" },
-  { id: "cardapio", rotulo: "Cardápio" },
-  { id: "mesas", rotulo: "Mesas" },
-  { id: "resultados", rotulo: "Resultados" },
-];
+const MINUTO = 60000;
+const LIMITE_ESPERA = 10 * MINUTO;
+const JANELA_RODADA = 5 * MINUTO;
 
 // ---- Som (precisa de um toque do usuário para o navegador liberar) ----
 let ctxAudio: AudioContext | null = null;
@@ -146,56 +150,146 @@ function TelaPin({ pin, aoLiberar }: { pin: string; aoLiberar: () => void }) {
   );
 }
 
+// ---- Rodadas da cozinha ----
+interface Rodada {
+  chave: string;
+  mesaId: string;
+  numeroMesa: number | string;
+  pedidos: Pedido[];
+  emPreparo: Pedido[];
+  aguardando: Pedido[]; // pagos ainda não iniciados
+  numero: number;
+}
+
+const instantePago = (p: Pedido) =>
+  new Date(p.pago_em ?? p.criado_em).getTime();
+
+function agruparRodadas(lista: Pedido[]): Pedido[][] {
+  const ordenada = [...lista].sort((a, b) => instantePago(a) - instantePago(b));
+  const grupos: Pedido[][] = [];
+  for (const p of ordenada) {
+    const g = grupos[grupos.length - 1];
+    const ultimo = g?.[g.length - 1];
+    const emPreparo = g?.some((x) => x.status === "em_preparo");
+    if (
+      g &&
+      ultimo &&
+      (emPreparo || instantePago(p) - instantePago(ultimo) <= JANELA_RODADA)
+    ) {
+      g.push(p);
+    } else {
+      grupos.push([p]);
+    }
+  }
+  return grupos;
+}
+
+function minutosDesde(iso: string) {
+  return Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / MINUTO));
+}
+
 function PainelPage() {
   const dados = useDados();
   const { barraca, mesas, garcons, produtos, pedidos } = dados;
-  const [aba, setAba] = useState<Aba>("pedidos");
+  const [aba, setAba] = useState<Aba>("caixa");
   const [lancando, setLancando] = useState(false);
-  const [novos, setNovos] = useState<string[]>([]);
   const [somAtivo, setSomAtivo] = useState(false);
   const [liberado, setLiberado] = useState(false);
-  const conhecidos = useRef<string[] | null>(null);
+  const [alertas, setAlertas] = useState<string[]>([]);
+  const [, forcarRelogio] = useState(0);
+  const pagosConhecidos = useRef<string[] | null>(null);
 
   useEffect(() => {
     setLiberado(painelLiberado());
   }, []);
 
+  // relógio para os tempos de espera e a expiração automática
   useEffect(() => {
-    const ids = pedidos.map((p) => p.id);
-    if (conhecidos.current === null) {
-      conhecidos.current = ids;
+    const t = setInterval(() => forcarRelogio((n) => n + 1), 15000);
+    return () => clearInterval(t);
+  }, []);
+
+  const pendentesCaixa = useMemo(
+    () => pedidos.filter((p) => !p.pago && p.status === "novo"),
+    [pedidos],
+  );
+
+  // pedido aguardando Pix há mais de 10 minutos expira sozinho
+  useEffect(() => {
+    for (const p of pendentesCaixa) {
+      if (Date.now() - new Date(p.criado_em).getTime() > LIMITE_ESPERA) {
+        void encerrarPedido(p.id, "expirado");
+      }
+    }
+  });
+
+  // entrou item pago para preparar → alerta da cozinha
+  useEffect(() => {
+    const ids = pedidos
+      .filter((p) => p.pago && p.status !== "entregue")
+      .map((p) => p.id);
+    if (pagosConhecidos.current === null) {
+      pagosConhecidos.current = ids;
       return;
     }
-    const chegaram = ids.filter((id) => !conhecidos.current!.includes(id));
-    conhecidos.current = ids;
+    const chegaram = ids.filter((id) => !pagosConhecidos.current!.includes(id));
+    pagosConhecidos.current = ids;
     if (chegaram.length) {
       tocarSino();
-      setNovos((n) => [...new Set([...n, ...chegaram])]);
+      setAlertas((a) => [...new Set([...a, ...chegaram])]);
     }
   }, [pedidos]);
 
-  // pedidos que ainda pedem atenção: chegaram e o pagamento não foi confirmado
-  const emAlerta = useMemo(
-    () => novos.filter((id) => pedidos.some((p) => p.id === id && !p.pago)),
-    [novos, pedidos],
-  );
-
   useEffect(() => {
-    if (emAlerta.length === 0) return;
+    if (alertas.length === 0) return;
     const t = setInterval(() => tocarSino(), 30000);
     return () => clearInterval(t);
-  }, [emAlerta.length]);
-
-  const ordenados = useMemo(
-    () =>
-      [...pedidos].sort((a, b) => b.criado_em.localeCompare(a.criado_em)),
-    [pedidos],
-  );
+  }, [alertas.length]);
 
   const nomeMesa = (id: string) =>
     mesas.find((m) => m.id === id)?.numero ?? "?";
   const nomeGarcom = (id: string | null) =>
     garcons.find((g) => g.id === id)?.nome ?? "—";
+
+  const rodadas = useMemo<Rodada[]>(() => {
+    const hoje = new Date().toDateString();
+    const saida: Rodada[] = [];
+    for (const mesa of mesas) {
+      const daMesa = pedidos.filter((p) => p.mesa_id === mesa.id && p.pago);
+      const entreguesHoje = daMesa.filter(
+        (p) =>
+          p.status === "entregue" &&
+          new Date(p.pago_em ?? p.criado_em).toDateString() === hoje,
+      );
+      const jaFechadas = agruparRodadas(entreguesHoje).length;
+      const ativos = daMesa.filter(
+        (p) => p.status === "pago" || p.status === "em_preparo",
+      );
+      agruparRodadas(ativos).forEach((grupo, i) => {
+        saida.push({
+          chave: grupo[0]!.id,
+          mesaId: mesa.id,
+          numeroMesa: mesa.numero,
+          pedidos: grupo,
+          emPreparo: grupo.filter((p) => p.status === "em_preparo"),
+          aguardando: grupo.filter((p) => p.status === "pago"),
+          numero: jaFechadas + i + 1,
+        });
+      });
+    }
+    return saida;
+  }, [mesas, pedidos]);
+
+  const rodadasOrdenadas = useMemo(() => {
+    const comAlerta = (r: Rodada) =>
+      r.pedidos.some((p) => alertas.includes(p.id));
+    return [...rodadas].sort((a, b) => {
+      if (comAlerta(a) !== comAlerta(b)) return comAlerta(a) ? -1 : 1;
+      const ua = Math.max(...a.pedidos.map(instantePago));
+      const ub = Math.max(...b.pedidos.map(instantePago));
+      return ub - ua;
+    });
+  }, [rodadas, alertas]);
 
   if (!dados.pronto) {
     return (
@@ -212,16 +306,29 @@ function PainelPage() {
     return <TelaPin pin={barraca.pin} aoLiberar={() => setLiberado(true)} />;
   }
 
-  return (
+  const abas: Array<{ id: Aba; rotulo: string }> = [
+    {
+      id: "caixa",
+      rotulo: pendentesCaixa.length
+        ? `Caixa (${pendentesCaixa.length})`
+        : "Caixa",
+    },
+    { id: "cozinha", rotulo: "Cozinha" },
+    { id: "cardapio", rotulo: "Cardápio" },
+    { id: "mesas", rotulo: "Mesas" },
+    { id: "resultados", rotulo: "Resultados" },
+    { id: "pendencias", rotulo: "Pendências" },
+  ];
 
+  return (
     <div className="min-h-screen pb-28">
       <AppHeader subtitulo="Painel" />
 
-      {!somAtivo && (
+      {aba === "cozinha" && !somAtivo && (
         <div className="sticky top-[60px] z-40 border-b-2 border-border bg-accent px-4 py-3 text-accent-foreground">
           <div className="mx-auto flex max-w-3xl flex-wrap items-center gap-3">
             <p className="flex-1 text-lg font-extrabold">
-              Som desativado: você não vai ouvir os pedidos novos.
+              Som desativado: você não vai ouvir os itens novos.
             </p>
             <button
               onClick={() => {
@@ -238,10 +345,9 @@ function PainelPage() {
         </div>
       )}
 
-
       <div className="sticky top-[60px] z-30 border-b-2 border-border bg-background">
         <div className="mx-auto flex max-w-3xl gap-2 overflow-x-auto px-4 py-3">
-          {ABAS.map((a) => (
+          {abas.map((a) => (
             <button
               key={a.id}
               onClick={() => setAba(a.id)}
@@ -258,10 +364,10 @@ function PainelPage() {
       </div>
 
       <main className="mx-auto max-w-3xl px-4 pt-5">
-        {aba === "pedidos" && (
+        {aba === "caixa" && (
           <>
             <div className="flex items-center justify-between gap-3">
-              <h1 className="text-3xl font-extrabold">Pedidos</h1>
+              <h1 className="text-3xl font-extrabold">Caixa</h1>
               <button
                 onClick={() => setLancando(true)}
                 className="btn-base bg-accent text-accent-foreground"
@@ -269,20 +375,79 @@ function PainelPage() {
                 Lançar pedido
               </button>
             </div>
+            <p className="mt-1 text-base text-muted-foreground">
+              {pendentesCaixa.length} pedido(s) aguardando confirmação do Pix.
+              Depois de 10 minutos o pedido expira sozinho.
+            </p>
 
+            <div className="mt-4 grid gap-3">
+              {pendentesCaixa.map((p) => (
+                <article key={p.id} className="card-praia p-4">
+                  <div className="flex flex-wrap items-baseline justify-between gap-2">
+                    <h2 className="text-2xl font-extrabold">
+                      Mesa {nomeMesa(p.mesa_id)}
+                    </h2>
+                    <span className="text-base text-muted-foreground">
+                      há {minutosDesde(p.criado_em)} min · Garçom:{" "}
+                      {nomeGarcom(p.garcom_id)}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-lg font-semibold">
+                    {p.itens
+                      .map((i) => `${i.quantidade}× ${i.nome_produto}`)
+                      .join(", ")}
+                  </p>
+                  <p className="mt-2 text-xl font-extrabold">
+                    {formatarReal(p.total)}
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button
+                      onClick={() => confirmarPagamento(p.id)}
+                      className="btn-base bg-success text-success-foreground"
+                    >
+                      Confirmar pagamento
+                    </button>
+                    <button
+                      onClick={() => encerrarPedido(p.id, "cancelado")}
+                      className="btn-base border-2 border-border bg-card"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </article>
+              ))}
+              {pendentesCaixa.length === 0 && (
+                <p className="text-lg text-muted-foreground">
+                  Nenhum pedido aguardando pagamento.
+                </p>
+              )}
+            </div>
+          </>
+        )}
+
+        {aba === "cozinha" && (
+          <>
+            <h1 className="text-3xl font-extrabold">Cozinha</h1>
+            <p className="mt-1 text-base text-muted-foreground">
+              Só aparece aqui o que já está pago.
+            </p>
             <div className="mt-4 grid gap-4">
-              {ordenados.map((p) => (
-                <CardPedido
-                  key={p.id}
-                  pedido={p}
-                  numeroMesa={nomeMesa(p.mesa_id)}
-                  garcom={nomeGarcom(p.garcom_id)}
-                  destaque={emAlerta.includes(p.id)}
+              {rodadasOrdenadas.map((r) => (
+                <CardRodada
+                  key={r.chave}
+                  rodada={r}
+                  garcomDe={nomeGarcom}
+                  alertas={alertas}
+                  aoTocar={() =>
+                    setAlertas((a) =>
+                      a.filter((id) => !r.pedidos.some((p) => p.id === id)),
+                    )
+                  }
                 />
               ))}
-              {ordenados.length === 0 && (
+              {rodadasOrdenadas.length === 0 && (
                 <p className="text-lg text-muted-foreground">
-                  Nenhum pedido ainda hoje.
+                  Nada para preparar agora.
                 </p>
               )}
             </div>
@@ -292,6 +457,7 @@ function PainelPage() {
         {aba === "cardapio" && <AbaCardapio produtos={produtos} />}
         {aba === "mesas" && <AbaMesas />}
         {aba === "resultados" && <AbaResultados />}
+        {aba === "pendencias" && <AbaPendencias />}
 
         <div className="mt-8">
           <Link to="/" className="btn-base border-2 border-border bg-card">
@@ -306,102 +472,119 @@ function PainelPage() {
   );
 }
 
-function CardPedido({
-  pedido,
-  numeroMesa,
-  garcom,
-  destaque,
+function CardRodada({
+  rodada,
+  garcomDe,
+  alertas,
+  aoTocar,
 }: {
-  pedido: Pedido;
-  numeroMesa: number | string;
-  garcom: string;
-  destaque: boolean;
+  rodada: Rodada;
+  garcomDe: (id: string | null) => string;
+  alertas: string[];
+  aoTocar: () => void;
 }) {
-  const hora = new Date(pedido.criado_em).toLocaleTimeString("pt-BR", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-  const rotuloStatus = {
-    novo: "Novo",
-    em_preparo: "Em preparo",
-    entregue: "Entregue",
-  }[pedido.status];
+  const emAlerta = rodada.pedidos.filter((p) => alertas.includes(p.id));
+  const preparando = rodada.emPreparo.length > 0;
+  const novos = preparando ? rodada.aguardando : [];
+
+  const somar = (lista: Pedido[]) => {
+    const mapa = new Map<string, { nome: string; qtd: number }>();
+    for (const p of lista)
+      for (const i of p.itens) {
+        const atual = mapa.get(i.nome_produto) ?? { nome: i.nome_produto, qtd: 0 };
+        atual.qtd += i.quantidade;
+        mapa.set(i.nome_produto, atual);
+      }
+    return [...mapa.values()];
+  };
+
+  const itens = somar(rodada.pedidos);
+  const itensNovos = somar(novos);
+  const total = rodada.pedidos.reduce((s, p) => s + p.total, 0);
+
+  async function iniciarPreparo() {
+    for (const p of rodada.aguardando) await atualizarStatus(p.id, "em_preparo");
+  }
+  async function entregar() {
+    const prontos = preparando ? rodada.emPreparo : rodada.pedidos;
+    for (const p of prontos) await atualizarStatus(p.id, "entregue");
+    if (preparando)
+      for (const p of rodada.aguardando) await atualizarStatus(p.id, "em_preparo");
+  }
 
   return (
     <article
-      className={`card-praia p-4 ${destaque ? "destaque-novo border-accent" : ""}`}
+      onClick={aoTocar}
+      className={`card-praia p-4 ${emAlerta.length ? "destaque-novo border-accent" : ""}`}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h2 className="text-2xl font-extrabold">Mesa {numeroMesa}</h2>
-          <p className="text-base text-muted-foreground">
-            {hora} · {pedido.origem === "cliente" ? "Pelo QR Code" : "Pelo garçom"}{" "}
-            · Garçom: {garcom}
-          </p>
-        </div>
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h2 className="text-2xl font-extrabold">
+          Mesa {rodada.numeroMesa}
+          {rodada.numero > 1 && (
+            <span className="ml-2 rounded-full bg-primary px-3 py-1 text-sm font-extrabold text-primary-foreground">
+              {rodada.numero}ª rodada
+            </span>
+          )}
+        </h2>
         <span
           className={`rounded-full px-3 py-1 text-sm font-extrabold ${
-            pedido.status === "novo"
-              ? "bg-accent text-accent-foreground"
-              : pedido.status === "em_preparo"
-                ? "bg-primary text-primary-foreground"
-                : "bg-success text-success-foreground"
+            preparando
+              ? "bg-primary text-primary-foreground"
+              : "bg-success text-success-foreground"
           }`}
         >
-          {rotuloStatus}
+          {preparando ? "Em preparo" : "Pago, a preparar"}
         </span>
       </div>
 
+      {emAlerta.length > 0 && novos.length > 0 && (
+        <div className="mt-3 rounded-xl bg-accent p-3 text-accent-foreground">
+          <p className="text-lg font-extrabold">NOVOS ITENS</p>
+          <p className="text-lg font-semibold">
+            {itensNovos.map((i) => `${i.qtd}× ${i.nome}`).join(", ")}
+          </p>
+        </div>
+      )}
+
       <ul className="mt-3 grid gap-1 text-lg">
-        {pedido.itens.map((i) => (
-          <li key={i.id} className="flex justify-between">
-            <span className="font-semibold">
-              {i.quantidade}× {i.nome_produto}
-            </span>
-            <span className="font-bold">
-              {formatarReal(i.preco * i.quantidade)}
-            </span>
+        {itens.map((i) => (
+          <li key={i.nome} className="font-semibold">
+            {i.qtd}× {i.nome}
           </li>
         ))}
       </ul>
 
-      <div className="mt-3 flex flex-wrap items-center gap-x-4 border-t-2 border-border pt-3 text-lg">
-        <span className="font-extrabold">Total {formatarReal(pedido.total)}</span>
-        <span className="text-muted-foreground">
-          Caixinha {formatarReal(pedido.gorjeta)}
-        </span>
-        <span
-          className={`text-base font-bold ${pedido.pago ? "text-success" : "text-destructive"}`}
-        >
-          {pedido.pago ? "Pix conferido" : "Pix a conferir"}
-        </span>
+      <div className="mt-3 border-t-2 border-border pt-3 text-base text-muted-foreground">
+        {rodada.pedidos.map((p) => (
+          <p key={p.id}>
+            {new Date(p.pago_em ?? p.criado_em).toLocaleTimeString("pt-BR", {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}{" "}
+            · {formatarReal(p.total)} · Garçom: {garcomDe(p.garcom_id)}
+            {p.status === "pago" && preparando ? " · novo" : ""}
+          </p>
+        ))}
+        <p className="mt-1 text-lg font-extrabold text-foreground">
+          Total {formatarReal(total)}
+        </p>
       </div>
 
       <div className="mt-3 flex flex-wrap gap-2">
-        {!pedido.pago && (
+        {rodada.aguardando.length > 0 && (
           <button
-            onClick={() => confirmarPagamento(pedido.id)}
-            className="btn-base bg-success text-success-foreground"
-          >
-            Confirmar pagamento
-          </button>
-        )}
-        {pedido.status === "novo" && (
-          <button
-            onClick={() => atualizarStatus(pedido.id, "em_preparo")}
+            onClick={() => void iniciarPreparo()}
             className="btn-base bg-primary text-primary-foreground"
           >
             Iniciar preparo
           </button>
         )}
-        {pedido.status !== "entregue" && (
-          <button
-            onClick={() => atualizarStatus(pedido.id, "entregue")}
-            className="btn-base border-2 border-border bg-card"
-          >
-            Entregue
-          </button>
-        )}
+        <button
+          onClick={() => void entregar()}
+          className="btn-base border-2 border-border bg-card"
+        >
+          Entregue
+        </button>
       </div>
     </article>
   );
@@ -488,12 +671,81 @@ function AbaMesas() {
   );
 }
 
+function AbaPendencias() {
+  const { mesas, garcons, pedidos } = useDados();
+  const hoje = new Date().toDateString();
+  const nomeMesa = (id: string) => mesas.find((m) => m.id === id)?.numero ?? "?";
+  const nomeGarcom = (id: string | null) =>
+    garcons.find((g) => g.id === id)?.nome ?? "—";
+
+  const aguardando = pedidos.filter((p) => !p.pago && p.status === "novo");
+  const encerrados = pedidos.filter(
+    (p) =>
+      (p.status === "expirado" || p.status === "cancelado") &&
+      new Date(p.criado_em).toDateString() === hoje,
+  );
+
+  return (
+    <>
+      <h1 className="text-3xl font-extrabold">Pendências</h1>
+
+      <h2 className="mt-5 text-2xl font-extrabold">Aguardando Pix</h2>
+      <div className="mt-3 grid gap-3">
+        {aguardando.map((p) => (
+          <div key={p.id} className="card-praia flex flex-wrap gap-x-4 p-4 text-lg">
+            <span className="font-extrabold">Mesa {nomeMesa(p.mesa_id)}</span>
+            <span className="font-bold">{formatarReal(p.total)}</span>
+            <span className="text-muted-foreground">
+              há {minutosDesde(p.criado_em)} min · {nomeGarcom(p.garcom_id)}
+            </span>
+          </div>
+        ))}
+        {aguardando.length === 0 && (
+          <p className="text-lg text-muted-foreground">Nada aguardando Pix.</p>
+        )}
+      </div>
+
+      <h2 className="mt-6 text-2xl font-extrabold">
+        Expirados e cancelados de hoje
+      </h2>
+      <div className="mt-3 grid gap-3">
+        {encerrados.map((p) => (
+          <div key={p.id} className="card-praia flex flex-wrap gap-x-4 p-4 text-lg">
+            <span className="font-extrabold">Mesa {nomeMesa(p.mesa_id)}</span>
+            <span className="font-bold">{formatarReal(p.total)}</span>
+            <span className="text-muted-foreground">
+              {p.status === "expirado" ? "Expirado" : "Cancelado"} ·{" "}
+              {new Date(p.criado_em).toLocaleTimeString("pt-BR", {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </span>
+          </div>
+        ))}
+        {encerrados.length === 0 && (
+          <p className="text-lg text-muted-foreground">
+            Nenhum pedido expirado ou cancelado hoje.
+          </p>
+        )}
+      </div>
+    </>
+  );
+}
+
+interface ResumoGrupo {
+  pedidos: number;
+  faturamento: number;
+  ticket: number;
+  mesas: number;
+  porMesa: number;
+}
+
 function AbaResultados() {
   const { mesas, garcons, pedidos } = useDados();
   const [dias, setDias] = useState(7);
 
   const resumo = (lista: Pedido[]) => {
-    // Só entra no faturamento o pedido com pagamento confirmado pela cozinha.
+    // Todos os números consideram apenas pedidos pagos.
     const pagos = lista.filter((p) => p.pago);
     const comQr: Pedido[] = [];
     const semQr: Pedido[] = [];
@@ -501,24 +753,18 @@ function AbaResultados() {
       const mesa = mesas.find((m) => m.id === p.mesa_id);
       (mesa?.tem_qrcode ? comQr : semQr).push(p);
     }
-    const calc = (l: Pedido[]) => {
+    const calc = (l: Pedido[]): ResumoGrupo => {
       const faturamento = l.reduce((s, p) => s + p.total - p.gorjeta, 0);
+      const qtdMesas = new Set(l.map((p) => p.mesa_id)).size;
       return {
         pedidos: l.length,
         faturamento,
         ticket: l.length ? faturamento / l.length : 0,
+        mesas: qtdMesas,
+        porMesa: qtdMesas ? faturamento / qtdMesas : 0,
       };
     };
-    const naoPagos = lista.filter((p) => !p.pago);
-    return {
-      comQr: calc(comQr),
-      semQr: calc(semQr),
-      total: calc(pagos),
-      aguardando: {
-        pedidos: naoPagos.length,
-        valor: naoPagos.reduce((s, p) => s + p.total - p.gorjeta, 0),
-      },
-    };
+    return { comQr: calc(comQr), semQr: calc(semQr), total: calc(pagos) };
   };
 
   const hoje = new Date().toDateString();
@@ -536,14 +782,30 @@ function AbaResultados() {
   const caixinhas = garcons.map((g) => ({
     nome: g.nome,
     total: doPeriodo
-      .filter((p) => p.garcom_id === g.id)
+      .filter((p) => p.pago && p.garcom_id === g.id)
       .reduce((s, p) => s + p.gorjeta, 0),
   }));
 
   function exportarCsv() {
+    const ordenados = [...doPeriodo].sort((a, b) => {
+      if (a.pago !== b.pago) return a.pago ? -1 : 1;
+      return a.criado_em.localeCompare(b.criado_em);
+    });
     const linhas = [
-      ["Pedido", "Data", "Mesa", "QR Code", "Origem", "Garçom", "Status", "Pago", "Consumo", "Caixinha", "Total"],
-      ...doPeriodo.map((p) => {
+      [
+        "Pedido",
+        "Data",
+        "Mesa",
+        "QR Code",
+        "Origem",
+        "Garçom",
+        "Status",
+        "Conta no faturamento",
+        "Consumo",
+        "Caixinha",
+        "Total",
+      ],
+      ...ordenados.map((p) => {
         const mesa = mesas.find((m) => m.id === p.mesa_id);
         return [
           p.id,
@@ -620,19 +882,16 @@ function Bloco({
   r,
 }: {
   titulo: string;
-  r: {
-    comQr: { pedidos: number; faturamento: number; ticket: number };
-    semQr: { pedidos: number; faturamento: number; ticket: number };
-    total: { pedidos: number; faturamento: number; ticket: number };
-    aguardando: { pedidos: number; valor: number };
-  };
+  r: { comQr: ResumoGrupo; semQr: ResumoGrupo; total: ResumoGrupo };
 }) {
   const Linha = ({
     rotulo,
     v,
+    porMesa,
   }: {
     rotulo: string;
-    v: { pedidos: number; faturamento: number; ticket: number };
+    v: ResumoGrupo;
+    porMesa?: boolean;
   }) => (
     <div className="card-praia p-4">
       <p className="text-lg font-extrabold">{rotulo}</p>
@@ -644,8 +903,18 @@ function Bloco({
           Faturamento <strong>{formatarReal(v.faturamento)}</strong>
         </span>
         <span>
-          Ticket médio <strong>{formatarReal(v.ticket)}</strong>
+          Média por pedido <strong>{formatarReal(v.ticket)}</strong>
         </span>
+        {porMesa && (
+          <>
+            <span>
+              Mesas <strong>{v.mesas}</strong>
+            </span>
+            <span>
+              Média por mesa <strong>{formatarReal(v.porMesa)}</strong>
+            </span>
+          </>
+        )}
       </div>
     </div>
   );
@@ -654,19 +923,8 @@ function Bloco({
     <section className="mt-4 grid gap-3">
       <h2 className="text-2xl font-extrabold">{titulo}</h2>
       <Linha rotulo="Total da barraca" v={r.total} />
-      <Linha rotulo="Mesas com QR Code" v={r.comQr} />
-      <Linha rotulo="Mesas sem QR Code" v={r.semQr} />
-      <div className="card-praia p-4">
-        <p className="text-lg font-extrabold">Aguardando confirmação</p>
-        <div className="mt-1 flex flex-wrap gap-x-6 text-lg">
-          <span>
-            Pedidos <strong>{r.aguardando.pedidos}</strong>
-          </span>
-          <span>
-            Valor <strong>{formatarReal(r.aguardando.valor)}</strong>
-          </span>
-        </div>
-      </div>
+      <Linha rotulo="Mesas com QR Code" v={r.comQr} porMesa />
+      <Linha rotulo="Mesas sem QR Code" v={r.semQr} porMesa />
     </section>
   );
 }
@@ -676,6 +934,7 @@ function LancarPedido({ aoFechar }: { aoFechar: () => void }) {
   const [mesaId, setMesaId] = useState(mesas[0]?.id ?? "");
   const [garcomId, setGarcomId] = useState(garcons[0]?.id ?? "");
   const [qtds, setQtds] = useState<Record<string, number>>({});
+  const [enviando, setEnviando] = useState(false);
 
   const linhas = Object.entries(qtds)
     .map(([id, quantidade]) => ({
@@ -775,9 +1034,10 @@ function LancarPedido({ aoFechar }: { aoFechar: () => void }) {
             {formatarReal(total)}
           </span>
           <button
-            disabled={linhas.length === 0}
-            onClick={() => {
-              void criarPedido({
+            disabled={linhas.length === 0 || enviando}
+            onClick={async () => {
+              setEnviando(true);
+              await criarPedido({
                 mesa_id: mesaId,
                 garcom_id: garcomId || null,
                 origem: "garcom",
@@ -785,11 +1045,12 @@ function LancarPedido({ aoFechar }: { aoFechar: () => void }) {
                 pago: false,
                 linhas,
               });
+              setEnviando(false);
               aoFechar();
             }}
             className="btn-base bg-primary px-6 text-primary-foreground"
           >
-            Registrar pedido
+            {enviando ? "Enviando…" : "Registrar pedido"}
           </button>
         </div>
       </div>

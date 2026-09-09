@@ -66,6 +66,14 @@ function ClientePage() {
   const [enviando, setEnviando] = useState(false);
   const [pendente, setPendente] = useState(false);
   const [erroGarcom, setErroGarcom] = useState(false);
+  const [rachando, setRachando] = useState(false);
+  const [pessoas, setPessoas] = useState(2);
+
+  const meuPedido = dados.pedidos.find((p) => p.id === pedidoId);
+  const expirado =
+    !!meuPedido &&
+    (meuPedido.status === "expirado" || meuPedido.status === "cancelado");
+  
 
   // acompanha a fila de reenvio para tirar o aviso "Enviando…" quando entrar
   const [, forcar] = useState(0);
@@ -87,6 +95,8 @@ function ClientePage() {
     0,
   );
   const totalGeral = consumo + gorjeta;
+  // divisão apenas visual: arredonda os centavos para cima
+  const porPessoa = Math.ceil((totalGeral * 100) / pessoas) / 100;
 
   const codigoPix = useMemo(
     () =>
@@ -393,6 +403,12 @@ function ClientePage() {
             </p>
           )}
 
+          {expirado && (
+            <p className="card-praia mt-3 p-3 text-lg font-extrabold text-destructive">
+              Pedido expirado, refaça quando quiser.
+            </p>
+          )}
+
           <div className="card-praia mt-4 flex flex-col items-center gap-3 p-5">
             {qr ? (
               <img
@@ -418,6 +434,43 @@ function ClientePage() {
             </button>
           </div>
 
+          <div className="mt-3">
+            <button
+              onClick={() => setRachando((v) => !v)}
+              aria-expanded={rachando}
+              className="text-base font-bold text-muted-foreground underline"
+            >
+              Rachar a conta?
+            </button>
+            {rachando && (
+              <div className="card-praia mt-3 p-4">
+                <p className="text-lg font-bold">Dividir por quantas pessoas?</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {[2, 3, 4, 5, 6, 7, 8].map((n) => (
+                    <button
+                      key={n}
+                      onClick={() => setPessoas(n)}
+                      className={`btn-base border-2 ${
+                        pessoas === n
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : "border-border bg-card"
+                      }`}
+                    >
+                      {n}
+                    </button>
+                  ))}
+                </div>
+                <p className="mt-3 text-2xl font-extrabold">
+                  {formatarReal(porPessoa)} por pessoa
+                </p>
+                <p className="mt-1 text-base text-muted-foreground">
+                  O Pix continua um só, com o valor total de{" "}
+                  {formatarReal(totalGeral)}.
+                </p>
+              </div>
+            )}
+          </div>
+
           <button
             onClick={() => {
               setEtapa("fim");
@@ -439,14 +492,17 @@ function ClientePage() {
       {etapa === "fim" && (
         <main className="mx-auto max-w-3xl px-4 pt-10 text-center">
           <p className="text-6xl" aria-hidden>
-            🍤
+            {expirado ? "⏳" : "🍤"}
           </p>
           <h1 className="mt-4 text-3xl font-extrabold">
-            Pedido enviado para a cozinha!
+            {expirado
+              ? "Pedido expirado, refaça quando quiser."
+              : "Pedido enviado para a cozinha!"}
           </h1>
           <p className="mt-2 text-lg text-muted-foreground">
-            A barraca vai conferir o Pix e começar o preparo. Fica tranquilo na
-            cadeira da Mesa {mesa.numero}.
+            {expirado
+              ? "O pagamento não foi confirmado a tempo. É só montar o pedido de novo."
+              : `A barraca vai conferir o Pix e começar o preparo. Fica tranquilo na cadeira da Mesa ${mesa.numero}.`}
           </p>
           {aindaNaFila && (
             <p className="mt-3 text-lg font-bold">

@@ -145,6 +145,7 @@ async function carregar() {
       total: Number(p.total),
       gorjeta: Number(p.gorjeta),
       criado_em: p.criado_em,
+      pago_em: (p as { pago_em?: string | null }).pago_em ?? null,
       itens: porPedido.get(p.id) ?? [],
     })),
   });
@@ -350,7 +351,23 @@ export async function atualizarStatus(pedidoId: string, status: StatusPedido) {
 }
 
 export async function confirmarPagamento(pedidoId: string) {
-  await supabase.from("pedidos").update({ pago: true }).eq("id", pedidoId);
+  await supabase
+    .from("pedidos")
+    .update({ pago: true, status: "pago", pago_em: new Date().toISOString() })
+    .eq("id", pedidoId);
+  await recarregar();
+}
+
+/** Cancela ou expira um pedido que nunca teve o pagamento confirmado. */
+export async function encerrarPedido(
+  pedidoId: string,
+  status: "cancelado" | "expirado",
+) {
+  await supabase
+    .from("pedidos")
+    .update({ status })
+    .eq("id", pedidoId)
+    .eq("pago", false);
   await recarregar();
 }
 
