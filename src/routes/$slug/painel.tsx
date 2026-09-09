@@ -140,6 +140,21 @@ function minutosDesde(iso: string) {
   return Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / MINUTO));
 }
 
+/** Marcador de grupo da mesa mostrado no Caixa e na Cozinha. */
+function MarcadorGrupo({ novo }: { novo: boolean }) {
+  return (
+    <span
+      className={`rounded-full px-3 py-1 text-sm font-extrabold ${
+        novo
+          ? "bg-accent text-accent-foreground"
+          : "bg-muted text-muted-foreground"
+      }`}
+    >
+      {novo ? "grupo novo" : "mesmo grupo"}
+    </span>
+  );
+}
+
 function PainelPage() {
   const { slug } = Route.useParams();
   const dados = useDados(slug);
