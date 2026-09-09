@@ -678,12 +678,110 @@ function CardRodada({
 
 
 function AbaMesas({ slug }: { slug: string }) {
-  const { mesas } = useDados();
+  const { mesas, garcons, pedidos, liberacoes } = useDados();
+  const [aberta, setAberta] = useState<string | null>(null);
+
+  const hora = (iso: string) =>
+    new Date(iso).toLocaleTimeString("pt-BR", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  const nomeGarcom = (id: string | null) =>
+    garcons.find((g) => g.id === id)?.nome ?? "—";
+
+  const mesa = mesas.find((m) => m.id === aberta);
+  if (mesa) {
+    const { atual, anteriores } = gruposDaMesa(pedidos, liberacoes, mesa.id);
+    return (
+      <>
+        <button
+          onClick={() => setAberta(null)}
+          className="btn-base border-2 border-border bg-card"
+        >
+          ← Voltar às mesas
+        </button>
+        <h1 className="mt-3 text-3xl font-extrabold">Mesa {mesa.numero}</h1>
+        <p className="mt-1 text-lg text-muted-foreground">
+          {atual.inicio
+            ? `Ocupada desde ${hora(atual.inicio)}`
+            : "Livre no momento"}
+        </p>
+
+        <div className="mt-4 grid gap-3">
+          {atual.pedidos.map((p) => (
+            <div key={p.id} className="card-praia p-4">
+              <div className="flex flex-wrap items-baseline justify-between gap-2">
+                <p className="text-xl font-extrabold">{hora(p.criado_em)}</p>
+                <span className="text-base text-muted-foreground">
+                  {p.status} · {p.forma_pagamento === "cartao" ? "cartão" : "Pix"}{" "}
+                  · {nomeGarcom(p.garcom_id)}
+                </span>
+              </div>
+              <p className="mt-1 text-lg font-semibold">
+                {p.itens.map((i) => `${i.quantidade}× ${i.nome_produto}`).join(", ")}
+              </p>
+              <p className="mt-1 text-xl font-extrabold">
+                {formatarReal(p.total)}
+              </p>
+            </div>
+          ))}
+          {atual.pedidos.length === 0 && (
+            <p className="text-lg text-muted-foreground">
+              Nenhum pedido neste grupo.
+            </p>
+          )}
+        </div>
+
+        <p className="mt-4 text-2xl font-extrabold">
+          Total do grupo: {formatarReal(atual.total)}
+        </p>
+        <button
+          disabled={atual.pedidos.length === 0}
+          onClick={() => void liberarMesa(mesa.id)}
+          className="btn-base mt-3 bg-primary text-primary-foreground disabled:opacity-50"
+        >
+          Liberar mesa
+        </button>
+
+        <div className="mt-4 flex items-center gap-3">
+          <p className="flex-1 text-lg font-bold">Plaquinha com QR Code</p>
+          <button
+            onClick={() => alternarQrCodeMesa(mesa.id)}
+            aria-pressed={mesa.tem_qrcode}
+            className={`btn-base min-w-[9rem] ${
+              mesa.tem_qrcode
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted text-muted-foreground"
+            }`}
+          >
+            {mesa.tem_qrcode ? "Com QR Code" : "Sem QR Code"}
+          </button>
+        </div>
+
+        {anterioresDeHoje(anteriores).length > 0 && (
+          <section className="mt-6">
+            <h2 className="text-xl font-extrabold text-muted-foreground">
+              Grupos anteriores de hoje
+            </h2>
+            <div className="mt-2 grid gap-2">
+              {anterioresDeHoje(anteriores).map((g, i) => (
+                <p key={i} className="text-lg text-muted-foreground">
+                  {g.inicio ? hora(g.inicio) : "—"} até{" "}
+                  {g.fim ? hora(g.fim) : "—"} · {formatarReal(g.total)}
+                </p>
+              ))}
+            </div>
+          </section>
+        )}
+      </>
+    );
+  }
+
   return (
     <>
       <h1 className="text-3xl font-extrabold">Mesas</h1>
       <p className="mt-1 text-base text-muted-foreground">
-        Marque quais mesas já têm a plaquinha com QR Code.
+        Toque numa mesa para ver o consumo do grupo e liberar a mesa.
       </p>
       <Link
         to="/$slug/qrcodes"
@@ -695,26 +793,42 @@ function AbaMesas({ slug }: { slug: string }) {
       <div className="mt-4 grid gap-3">
         {[...mesas]
           .sort((a, b) => a.numero - b.numero)
-          .map((m) => (
-            <div key={m.id} className="card-praia flex items-center gap-3 p-4">
-              <p className="flex-1 text-xl font-extrabold">Mesa {m.numero}</p>
+          .map((m) => {
+            const { atual } = gruposDaMesa(pedidos, liberacoes, m.id);
+            const ocupada = atual.pedidos.length > 0;
+            return (
               <button
-                onClick={() => alternarQrCodeMesa(m.id)}
-                aria-pressed={m.tem_qrcode}
-                className={`btn-base min-w-[9rem] ${
-                  m.tem_qrcode
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted text-muted-foreground"
+                key={m.id}
+                onClick={() => setAberta(m.id)}
+                className={`card-praia flex items-center gap-3 p-4 text-left ${
+                  ocupada ? "border-accent" : ""
                 }`}
               >
-                {m.tem_qrcode ? "Com QR Code" : "Sem QR Code"}
+                <div className="min-w-0 flex-1">
+                  <p className="text-xl font-extrabold">Mesa {m.numero}</p>
+                  <p className="text-base text-muted-foreground">
+                    {ocupada
+                      ? `Ocupada desde ${hora(atual.inicio!)} · ${formatarReal(atual.total)}`
+                      : "Livre"}
+                  </p>
+                </div>
+                <span
+                  className={`rounded-full px-3 py-1 text-sm font-extrabold ${
+                    m.tem_qrcode
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-muted-foreground"
+                  }`}
+                >
+                  {m.tem_qrcode ? "Com QR" : "Sem QR"}
+                </span>
               </button>
-            </div>
-          ))}
+            );
+          })}
       </div>
     </>
   );
 }
+
 
 type Periodo = "hoje" | "semana" | "mes";
 
