@@ -580,10 +580,11 @@ function CardRodada({
       }`}
     >
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="text-2xl font-extrabold">
+        <h2 className="flex flex-wrap items-center gap-2 text-2xl font-extrabold">
           Mesa {rodada.numeroMesa}
+          <MarcadorGrupo novo={grupoNovo} />
           {rodada.numero > 1 && (
-            <span className="ml-2 rounded-full bg-primary px-3 py-1 text-sm font-extrabold text-primary-foreground">
+            <span className="rounded-full bg-primary px-3 py-1 text-sm font-extrabold text-primary-foreground">
               {rodada.numero}ª rodada
             </span>
           )}
