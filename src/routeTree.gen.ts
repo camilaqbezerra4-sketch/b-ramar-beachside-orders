@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteImport } from './routes/admin'
+import { Route as SlugGarcomRouteImport } from './routes/$slug/garcom'
 import { Route as SlugPainelRouteImport } from './routes/$slug/painel'
 import { Route as SlugQrcodesRouteImport } from './routes/$slug/qrcodes'
 import { Route as SlugMesaNumeroRouteImport } from './routes/$slug/mesa/$numero'
@@ -23,6 +24,11 @@ const IndexRoute = IndexRouteImport.update({
 const AdminRoute = AdminRouteImport.update({
   id: '/admin',
   path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SlugGarcomRoute = SlugGarcomRouteImport.update({
+  id: '/$slug/garcom',
+  path: '/$slug/garcom',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SlugPainelRoute = SlugPainelRouteImport.update({
@@ -44,6 +50,7 @@ const SlugMesaNumeroRoute = SlugMesaNumeroRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/$slug/garcom': typeof SlugGarcomRoute
   '/$slug/painel': typeof SlugPainelRoute
   '/$slug/qrcodes': typeof SlugQrcodesRoute
   '/$slug/mesa/$numero': typeof SlugMesaNumeroRoute
@@ -51,6 +58,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/$slug/garcom': typeof SlugGarcomRoute
   '/$slug/painel': typeof SlugPainelRoute
   '/$slug/qrcodes': typeof SlugQrcodesRoute
   '/$slug/mesa/$numero': typeof SlugMesaNumeroRoute
@@ -59,6 +67,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/$slug/garcom': typeof SlugGarcomRoute
   '/$slug/painel': typeof SlugPainelRoute
   '/$slug/qrcodes': typeof SlugQrcodesRoute
   '/$slug/mesa/$numero': typeof SlugMesaNumeroRoute
@@ -66,14 +75,25 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/admin' | '/$slug/painel' | '/$slug/qrcodes' | '/$slug/mesa/$numero'
+    | '/'
+    | '/admin'
+    | '/$slug/garcom'
+    | '/$slug/painel'
+    | '/$slug/qrcodes'
+    | '/$slug/mesa/$numero'
   fileRoutesByTo: FileRoutesByTo
   to:
-    '/' | '/admin' | '/$slug/painel' | '/$slug/qrcodes' | '/$slug/mesa/$numero'
+    | '/'
+    | '/admin'
+    | '/$slug/garcom'
+    | '/$slug/painel'
+    | '/$slug/qrcodes'
+    | '/$slug/mesa/$numero'
   id:
     | '__root__'
     | '/'
     | '/admin'
+    | '/$slug/garcom'
     | '/$slug/painel'
     | '/$slug/qrcodes'
     | '/$slug/mesa/$numero'
@@ -82,6 +102,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
+  SlugGarcomRoute: typeof SlugGarcomRoute
   SlugPainelRoute: typeof SlugPainelRoute
   SlugQrcodesRoute: typeof SlugQrcodesRoute
   SlugMesaNumeroRoute: typeof SlugMesaNumeroRoute
@@ -101,6 +122,13 @@ declare module '@tanstack/react-router' {
       path: '/admin'
       fullPath: '/admin'
       preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/$slug/garcom': {
+      id: '/$slug/garcom'
+      path: '/$slug/garcom'
+      fullPath: '/$slug/garcom'
+      preLoaderRoute: typeof SlugGarcomRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/$slug/painel': {
@@ -130,6 +158,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
+  SlugGarcomRoute: SlugGarcomRoute,
   SlugPainelRoute: SlugPainelRoute,
   SlugQrcodesRoute: SlugQrcodesRoute,
   SlugMesaNumeroRoute: SlugMesaNumeroRoute,
