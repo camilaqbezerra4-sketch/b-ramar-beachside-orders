@@ -40,7 +40,8 @@ type Aba =
   | "equipe"
   | "mesas"
   | "resultados"
-  | "historico";
+  | "historico"
+  | "ajuda";
 
 const MINUTO = 60000;
 const LIMITE_ESPERA = 10 * MINUTO;
