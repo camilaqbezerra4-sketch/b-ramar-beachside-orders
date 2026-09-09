@@ -2,23 +2,17 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { SuporteWhatsApp } from "@/components/SuporteWhatsApp";
+import { AbaCardapio, AbaEquipe } from "@/components/GestaoBarraca";
 import {
   alternarQrCodeMesa,
-  atualizarProduto,
   atualizarStatus,
   confirmarPagamento,
-  criarGarcom,
   criarPedido,
-  criarProduto,
   encerrarPedido,
   formatarReal,
-  moverProduto,
-  removerGarcom,
-  removerProduto,
-  renomearCategoria,
   useDados,
 } from "@/lib/store";
-import { categoriasDe, type Pedido, type Produto } from "@/lib/types";
+import type { Pedido } from "@/lib/types";
 
 export const Route = createFileRoute("/$slug/painel")({
   head: () => ({
