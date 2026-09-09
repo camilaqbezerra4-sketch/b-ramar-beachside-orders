@@ -660,6 +660,7 @@ function BlocoLinks({ barraca }: { barraca: BarracaAdmin }) {
 
   const links: Array<[string, string]> = [
     ["Painel da barraca", `${DOMINIO}/${barraca.slug}/painel`],
+    ["Tela do garçom", `${DOMINIO}/${barraca.slug}/garcom`],
     ["Cardápio da Mesa 1", `${DOMINIO}/${barraca.slug}/mesa/1`],
     ["QR Codes das mesas", `${DOMINIO}/${barraca.slug}/qrcodes`],
   ];
