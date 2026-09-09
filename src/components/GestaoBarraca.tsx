@@ -10,6 +10,8 @@ import {
   useDados,
 } from "@/lib/store";
 import { categoriasDe, type Produto } from "@/lib/types";
+import { CampoChavePix } from "@/components/CampoChavePix";
+import { analisarChavePix } from "@/lib/chave-pix";
 
 export function AbaCardapio({ produtos }: { produtos: Produto[] }) {
   const categorias = categoriasDe(produtos);

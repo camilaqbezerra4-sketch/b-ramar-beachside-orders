@@ -236,13 +236,8 @@ function NovaBarraca({ aoCriar }: { aoCriar: () => Promise<void> }) {
         aria-label="Endereço curto"
         className={campo}
       />
-      <input
-        value={chavePix}
-        onChange={(e) => setChavePix(e.target.value)}
-        placeholder="Chave Pix"
-        aria-label="Chave Pix"
-        className={campo}
-      />
+      <CampoChavePix valor={chavePix} aoMudar={setChavePix} />
+
       <input
         value={cidade}
         onChange={(e) => setCidade(e.target.value)}
