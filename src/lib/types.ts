@@ -9,6 +9,7 @@ export type StatusPedido =
   | "cancelado"
   | "expirado";
 export type OrigemPedido = "cliente" | "garcom";
+export type FormaPagamento = "pix" | "cartao";
 
 export interface Barraca {
   id: string;
