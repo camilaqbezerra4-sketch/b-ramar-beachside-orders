@@ -666,7 +666,7 @@ function BlocoLinks({ barraca }: { barraca: BarracaAdmin }) {
   ];
 
   const whats = (barraca.whatsapp_suporte || "").replace(/\D/g, "");
-  const mensagem = `Seu painel BóraMar: ${DOMINIO}/${barraca.slug}/painel. PIN: ${barraca.pin}`;
+  const mensagem = `Seu painel BóraMar: ${DOMINIO}/${barraca.slug}/painel. Tela do garçom: ${DOMINIO}/${barraca.slug}/garcom. PIN: ${barraca.pin}`;
 
   return (
     <section className="mt-4 rounded-2xl border-2 border-border bg-background p-3">
