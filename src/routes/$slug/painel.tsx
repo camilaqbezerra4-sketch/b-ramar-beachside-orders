@@ -524,6 +524,7 @@ function PainelPage() {
         {aba === "mesas" && <AbaMesas slug={slug} />}
         {aba === "resultados" && <AbaResultados />}
         {aba === "historico" && <AbaHistorico />}
+        {aba === "ajuda" && <AbaAjuda whatsapp={barraca.whatsapp_suporte} />}
 
         <div className="mt-8">
           <Link to="/" className="btn-base border-2 border-border bg-card">
