@@ -377,7 +377,21 @@ function PainelPage() {
 
   return (
     <div className="min-h-screen pb-28">
-      <AppHeader subtitulo="Painel" />
+      <AppHeader
+        titulo={barraca.nome}
+        subtitulo="Painel"
+        acao={
+          <button
+            onClick={() => {
+              localStorage.removeItem(chavePin(slug));
+              setLiberado(false);
+            }}
+            className="rounded-full bg-primary-foreground/15 px-3 py-1 text-sm font-bold"
+          >
+            Sair
+          </button>
+        }
+      />
 
       {aba === "cozinha" && !somAtivo && (
         <div className="sticky top-[60px] z-40 border-b-2 border-border bg-accent px-4 py-3 text-accent-foreground">
