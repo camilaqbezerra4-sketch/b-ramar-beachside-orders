@@ -182,6 +182,7 @@ function AdminPage() {
                   {b.ativa ? "Desativar" : "Reativar"}
                 </button>
               </div>
+              <BlocoLinks barraca={b} />
             </article>
           ))}
         </div>
