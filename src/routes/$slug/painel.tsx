@@ -1140,6 +1140,12 @@ function Bloco({
         <span>
           Média por pedido <strong>{formatarReal(v.ticket)}</strong>
         </span>
+        <span>
+          Pix <strong>{formatarReal(v.pix)}</strong>
+        </span>
+        <span>
+          Cartão <strong>{formatarReal(v.cartao)}</strong>
+        </span>
         {porMesa && (
           <>
             <span>
