@@ -166,7 +166,7 @@ function ClientePage() {
 
   return (
     <div className="min-h-screen pb-32">
-      <AppHeader subtitulo={`Mesa ${mesa.numero}`} />
+      <AppHeader titulo={barraca.nome} subtitulo={`Mesa ${mesa.numero}`} />
 
       {etapa === "cardapio" && (
         <main className="mx-auto max-w-3xl px-4 pt-5">
