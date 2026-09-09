@@ -521,12 +521,14 @@ function CardRodada({
   rodada,
   garcomDe,
   alertas,
+  grupoNovo,
   prontoDesde,
   aoTocar,
 }: {
   rodada: Rodada;
   garcomDe: (id: string | null) => string;
   alertas: string[];
+  grupoNovo: boolean;
   prontoDesde: number | undefined;
   aoTocar: () => void;
 }) {
