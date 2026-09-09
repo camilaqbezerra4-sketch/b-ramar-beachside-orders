@@ -73,7 +73,7 @@ function ClientePage() {
   const expirado =
     !!meuPedido &&
     (meuPedido.status === "expirado" || meuPedido.status === "cancelado");
-  const porPessoa = Math.ceil((totalGeralRef(consumo, gorjeta) * 100) / pessoas) / 100;
+  
 
   // acompanha a fila de reenvio para tirar o aviso "Enviando…" quando entrar
   const [, forcar] = useState(0);
