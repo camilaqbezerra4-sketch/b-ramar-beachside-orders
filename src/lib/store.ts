@@ -202,6 +202,11 @@ function iniciar() {
     .on("postgres_changes", { event: "*", schema: "public", table: "itens_pedido" }, recarregarTabela)
     .on("postgres_changes", { event: "*", schema: "public", table: "produtos" }, recarregarTabela)
     .on("postgres_changes", { event: "*", schema: "public", table: "mesas" }, recarregarTabela)
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "liberacoes_mesa" },
+      recarregarTabela,
+    )
     .subscribe();
 }
 
