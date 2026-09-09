@@ -161,14 +161,23 @@ async function carregar() {
       origem: p.origem as Pedido["origem"],
       status: p.status as StatusPedido,
       pago: p.pago,
+      forma_pagamento: ((p as { forma_pagamento?: string }).forma_pagamento ??
+        "pix") as FormaPagamento,
       total: Number(p.total),
       gorjeta: Number(p.gorjeta),
       criado_em: p.criado_em,
       pago_em: (p as { pago_em?: string | null }).pago_em ?? null,
       itens: porPedido.get(p.id) ?? [],
     })),
+    liberacoes: (liberacoes.data ?? []).map((l) => ({
+      id: l.id,
+      barraca_id: l.barraca_id,
+      mesa_id: l.mesa_id,
+      liberada_em: l.liberada_em,
+    })),
   });
 }
+
 
 function recarregar() {
   return carregar().catch((e) => {
