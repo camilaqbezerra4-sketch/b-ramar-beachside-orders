@@ -46,9 +46,9 @@ function ClientePage() {
     };
 
   const categorias = useMemo(() => categoriasDe(produtos), [produtos]);
-  const [etapa, setEtapa] = useState<"cardapio" | "checkout" | "pix" | "fim">(
-    "cardapio",
-  );
+  const [etapa, setEtapa] = useState<
+    "cardapio" | "checkout" | "pix" | "cartao" | "fim"
+  >("cardapio");
   const [abaEscolhida, setAba] = useState<string>("");
   const aba = abaEscolhida || categorias[0] || "";
   const [carrinho, setCarrinho] = useState<Record<string, number>>({});
