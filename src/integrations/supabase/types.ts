@@ -136,6 +136,48 @@ export type Database = {
           },
         ]
       }
+      liberacoes_mesa: {
+        Row: {
+          barraca_id: string
+          criado_em: string
+          id: string
+          liberada_em: string
+          mesa_id: string
+          updated_at: string
+        }
+        Insert: {
+          barraca_id: string
+          criado_em?: string
+          id?: string
+          liberada_em?: string
+          mesa_id: string
+          updated_at?: string
+        }
+        Update: {
+          barraca_id?: string
+          criado_em?: string
+          id?: string
+          liberada_em?: string
+          mesa_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "liberacoes_mesa_barraca_id_fkey"
+            columns: ["barraca_id"]
+            isOneToOne: false
+            referencedRelation: "barracas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "liberacoes_mesa_mesa_id_fkey"
+            columns: ["mesa_id"]
+            isOneToOne: false
+            referencedRelation: "mesas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mesas: {
         Row: {
           barraca_id: string
@@ -175,6 +217,7 @@ export type Database = {
         Row: {
           barraca_id: string
           criado_em: string
+          forma_pagamento: string
           garcom_id: string | null
           gorjeta: number
           id: string
@@ -189,6 +232,7 @@ export type Database = {
         Insert: {
           barraca_id: string
           criado_em?: string
+          forma_pagamento?: string
           garcom_id?: string | null
           gorjeta?: number
           id?: string
@@ -203,6 +247,7 @@ export type Database = {
         Update: {
           barraca_id?: string
           criado_em?: string
+          forma_pagamento?: string
           garcom_id?: string | null
           gorjeta?: number
           id?: string
