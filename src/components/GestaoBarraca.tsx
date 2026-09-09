@@ -180,6 +180,8 @@ export function AbaEquipe() {
   const { garcons } = useDados();
   const [nome, setNome] = useState("");
   const [pix, setPix] = useState("");
+  const chave = analisarChavePix(pix);
+  const podeSalvar = nome.trim().length > 0 && chave.ok;
 
   return (
     <>
@@ -193,25 +195,25 @@ export function AbaEquipe() {
           aria-label="Nome do garçom"
           className="w-full rounded-xl border-2 border-border bg-background px-3 py-3 text-lg font-bold"
         />
-        <input
-          value={pix}
-          onChange={(e) => setPix(e.target.value)}
-          placeholder="Chave Pix"
-          aria-label="Chave Pix do garçom"
-          className="w-full rounded-xl border-2 border-border bg-background px-3 py-3 text-lg font-bold"
+        <CampoChavePix
+          valor={pix}
+          aoMudar={setPix}
+          rotulo="Chave Pix do garçom"
         />
         <button
+          disabled={!podeSalvar}
           onClick={() => {
-            if (!nome.trim()) return;
-            void criarGarcom(nome.trim(), pix.trim());
+            if (!podeSalvar) return;
+            void criarGarcom(nome.trim(), chave.valor);
             setNome("");
             setPix("");
           }}
-          className="btn-base bg-accent text-accent-foreground"
+          className="btn-base bg-accent text-accent-foreground disabled:opacity-50"
         >
           Adicionar
         </button>
       </div>
+
 
       <div className="mt-4 grid gap-3">
         {garcons.map((g) => (
