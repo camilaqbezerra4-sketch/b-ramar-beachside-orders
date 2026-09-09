@@ -434,6 +434,43 @@ function ClientePage() {
             </button>
           </div>
 
+          <div className="mt-3">
+            <button
+              onClick={() => setRachando((v) => !v)}
+              aria-expanded={rachando}
+              className="text-base font-bold text-muted-foreground underline"
+            >
+              Rachar a conta?
+            </button>
+            {rachando && (
+              <div className="card-praia mt-3 p-4">
+                <p className="text-lg font-bold">Dividir por quantas pessoas?</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {[2, 3, 4, 5, 6, 7, 8].map((n) => (
+                    <button
+                      key={n}
+                      onClick={() => setPessoas(n)}
+                      className={`btn-base border-2 ${
+                        pessoas === n
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : "border-border bg-card"
+                      }`}
+                    >
+                      {n}
+                    </button>
+                  ))}
+                </div>
+                <p className="mt-3 text-2xl font-extrabold">
+                  {formatarReal(porPessoa)} por pessoa
+                </p>
+                <p className="mt-1 text-base text-muted-foreground">
+                  O Pix continua um só, com o valor total de{" "}
+                  {formatarReal(totalGeral)}.
+                </p>
+              </div>
+            )}
+          </div>
+
           <button
             onClick={() => {
               setEtapa("fim");
