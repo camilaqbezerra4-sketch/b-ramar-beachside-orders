@@ -242,9 +242,11 @@ interface PedidoPendente {
     origem: Pedido["origem"];
     status: StatusPedido;
     pago: boolean;
+    forma_pagamento: FormaPagamento;
     total: number;
     gorjeta: number;
   };
+
   itens: Array<{
     id: string;
     pedido_id: string;
