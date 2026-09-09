@@ -359,6 +359,7 @@ function PainelPage() {
     { id: "mesas", rotulo: "Mesas" },
     { id: "resultados", rotulo: "Resultados" },
     { id: "historico", rotulo: "Histórico" },
+    { id: "ajuda", rotulo: "Ajuda" },
   ];
 
   const cardRodada = (r: Rodada) => (
