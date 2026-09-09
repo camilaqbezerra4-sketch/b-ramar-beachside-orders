@@ -957,6 +957,8 @@ interface ResumoGrupo {
   mesas: number;
   mesasQuePediram: number;
   porMesa: number;
+  pix: number;
+  cartao: number;
 }
 
 function AbaResultados() {
@@ -974,6 +976,10 @@ function AbaResultados() {
     }
     const calc = (l: Pedido[], totalMesas: number): ResumoGrupo => {
       const faturamento = l.reduce((s, p) => s + p.total - p.gorjeta, 0);
+      const soma = (forma: "pix" | "cartao") =>
+        l
+          .filter((p) => p.forma_pagamento === forma)
+          .reduce((s, p) => s + p.total - p.gorjeta, 0);
       return {
         pedidos: l.length,
         faturamento,
@@ -981,6 +987,8 @@ function AbaResultados() {
         mesas: totalMesas,
         mesasQuePediram: new Set(l.map((p) => p.mesa_id)).size,
         porMesa: totalMesas ? faturamento / totalMesas : 0,
+        pix: soma("pix"),
+        cartao: soma("cartao"),
       };
     };
     const mesasComQr = mesas.filter((m) => m.tem_qrcode).length;
