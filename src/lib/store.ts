@@ -193,9 +193,9 @@ const snapshot = () => estado;
 
 /** Carrega os dados de uma barraca pelo slug (sem slug: a primeira barraca). */
 export function useDados(slug?: string): DadosBarraca {
-  const alvo = slug ?? null;
-  if (alvo !== slugAtivo) {
-    slugAtivo = alvo;
+  // sem slug: mantém a barraca já carregada
+  if (slug !== undefined && slug !== slugAtivo) {
+    slugAtivo = slug;
     estado = { ...estado, pronto: false, existe: true };
     if (iniciado) recarregar();
   }
