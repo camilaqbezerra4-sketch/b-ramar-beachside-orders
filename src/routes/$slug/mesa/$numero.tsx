@@ -504,6 +504,48 @@ function ClientePage() {
         </main>
       )}
 
+      {etapa === "cartao" && (
+        <main className="mx-auto max-w-3xl px-4 pt-10 text-center">
+          <p className="text-6xl" aria-hidden>
+            {expirado ? "⏳" : "💳"}
+          </p>
+          <h1 className="mt-4 text-3xl font-extrabold">
+            {expirado
+              ? "Pedido expirado, refaça quando quiser."
+              : "Seu pedido foi enviado."}
+          </h1>
+          <p className="mt-2 text-lg text-muted-foreground">
+            {expirado
+              ? "O pagamento não foi confirmado a tempo. É só montar o pedido de novo."
+              : "O garçom vai até você com a maquininha."}
+          </p>
+          <p className="mt-3 text-2xl font-extrabold">
+            Total {formatarReal(totalGeral)}
+          </p>
+          {aindaNaFila && (
+            <p className="mt-3 text-lg font-bold">
+              Enviando… seu pedido está guardado e segue automaticamente quando
+              o sinal voltar.
+            </p>
+          )}
+          <button
+            onClick={() => {
+              setEtapa("cardapio");
+              setCarrinho({});
+              setGorjeta(5);
+              setOutroValor("");
+              setPedidoId("");
+              setPendente(false);
+            }}
+            className="btn-base mt-6 bg-primary text-primary-foreground"
+          >
+            Pedir mais alguma coisa
+          </button>
+        </main>
+      )}
+
+
+
       {etapa === "fim" && (
         <main className="mx-auto max-w-3xl px-4 pt-10 text-center">
           <p className="text-6xl" aria-hidden>
