@@ -1,6 +1,12 @@
 // Tipos espelhando o schema previsto no Supabase.
 export type Categoria = "Bebidas" | "Porções" | "Sobremesas";
-export type StatusPedido = "novo" | "em_preparo" | "entregue";
+export type StatusPedido =
+  | "novo"
+  | "pago"
+  | "em_preparo"
+  | "entregue"
+  | "cancelado"
+  | "expirado";
 export type OrigemPedido = "cliente" | "garcom";
 
 export interface Barraca {
@@ -56,6 +62,7 @@ export interface Pedido {
   total: number;
   gorjeta: number;
   criado_em: string;
+  pago_em: string | null;
   itens: ItemPedido[];
 }
 
