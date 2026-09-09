@@ -10,63 +10,53 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as ClienteRouteImport } from './routes/cliente'
-import { Route as PainelRouteImport } from './routes/painel'
-import { Route as QrcodesRouteImport } from './routes/qrcodes'
+import { Route as SlugQrcodesRouteImport } from './routes/$slug/qrcodes'
+import { Route as SlugMesaNumeroRouteImport } from './routes/$slug/mesa/$numero'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ClienteRoute = ClienteRouteImport.update({
-  id: '/cliente',
-  path: '/cliente',
+const SlugQrcodesRoute = SlugQrcodesRouteImport.update({
+  id: '/$slug/qrcodes',
+  path: '/$slug/qrcodes',
   getParentRoute: () => rootRouteImport,
 } as any)
-const PainelRoute = PainelRouteImport.update({
-  id: '/painel',
-  path: '/painel',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const QrcodesRoute = QrcodesRouteImport.update({
-  id: '/qrcodes',
-  path: '/qrcodes',
+const SlugMesaNumeroRoute = SlugMesaNumeroRouteImport.update({
+  id: '/$slug/mesa/$numero',
+  path: '/$slug/mesa/$numero',
   getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/cliente': typeof ClienteRoute
-  '/painel': typeof PainelRoute
-  '/qrcodes': typeof QrcodesRoute
+  '/$slug/qrcodes': typeof SlugQrcodesRoute
+  '/$slug/mesa/$numero': typeof SlugMesaNumeroRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/cliente': typeof ClienteRoute
-  '/painel': typeof PainelRoute
-  '/qrcodes': typeof QrcodesRoute
+  '/$slug/qrcodes': typeof SlugQrcodesRoute
+  '/$slug/mesa/$numero': typeof SlugMesaNumeroRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/cliente': typeof ClienteRoute
-  '/painel': typeof PainelRoute
-  '/qrcodes': typeof QrcodesRoute
+  '/$slug/qrcodes': typeof SlugQrcodesRoute
+  '/$slug/mesa/$numero': typeof SlugMesaNumeroRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/cliente' | '/painel' | '/qrcodes'
+  fullPaths: '/' | '/$slug/qrcodes' | '/$slug/mesa/$numero'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/cliente' | '/painel' | '/qrcodes'
-  id: '__root__' | '/' | '/cliente' | '/painel' | '/qrcodes'
+  to: '/' | '/$slug/qrcodes' | '/$slug/mesa/$numero'
+  id: '__root__' | '/' | '/$slug/qrcodes' | '/$slug/mesa/$numero'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  ClienteRoute: typeof ClienteRoute
-  PainelRoute: typeof PainelRoute
-  QrcodesRoute: typeof QrcodesRoute
+  SlugQrcodesRoute: typeof SlugQrcodesRoute
+  SlugMesaNumeroRoute: typeof SlugMesaNumeroRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -78,25 +68,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/cliente': {
-      id: '/cliente'
-      path: '/cliente'
-      fullPath: '/cliente'
-      preLoaderRoute: typeof ClienteRouteImport
+    '/$slug/qrcodes': {
+      id: '/$slug/qrcodes'
+      path: '/$slug/qrcodes'
+      fullPath: '/$slug/qrcodes'
+      preLoaderRoute: typeof SlugQrcodesRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/painel': {
-      id: '/painel'
-      path: '/painel'
-      fullPath: '/painel'
-      preLoaderRoute: typeof PainelRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/qrcodes': {
-      id: '/qrcodes'
-      path: '/qrcodes'
-      fullPath: '/qrcodes'
-      preLoaderRoute: typeof QrcodesRouteImport
+    '/$slug/mesa/$numero': {
+      id: '/$slug/mesa/$numero'
+      path: '/$slug/mesa/$numero'
+      fullPath: '/$slug/mesa/$numero'
+      preLoaderRoute: typeof SlugMesaNumeroRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -104,9 +87,8 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  ClienteRoute: ClienteRoute,
-  PainelRoute: PainelRoute,
-  QrcodesRoute: QrcodesRoute,
+  SlugQrcodesRoute: SlugQrcodesRoute,
+  SlugMesaNumeroRoute: SlugMesaNumeroRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
