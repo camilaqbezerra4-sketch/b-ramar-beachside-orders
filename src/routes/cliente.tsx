@@ -95,6 +95,8 @@ function ClientePage() {
     0,
   );
   const totalGeral = consumo + gorjeta;
+  // divisão apenas visual: arredonda os centavos para cima
+  const porPessoa = Math.ceil((totalGeral * 100) / pessoas) / 100;
 
   const codigoPix = useMemo(
     () =>
