@@ -175,6 +175,7 @@ export type Database = {
           mesa_id: string
           origem: string
           pago: boolean
+          pago_em: string | null
           status: string
           total: number
           updated_at: string
@@ -188,6 +189,7 @@ export type Database = {
           mesa_id: string
           origem?: string
           pago?: boolean
+          pago_em?: string | null
           status?: string
           total?: number
           updated_at?: string
@@ -201,6 +203,7 @@ export type Database = {
           mesa_id?: string
           origem?: string
           pago?: boolean
+          pago_em?: string | null
           status?: string
           total?: number
           updated_at?: string
