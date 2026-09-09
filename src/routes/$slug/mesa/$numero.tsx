@@ -46,9 +46,9 @@ function ClientePage() {
     };
 
   const categorias = useMemo(() => categoriasDe(produtos), [produtos]);
-  const [etapa, setEtapa] = useState<"cardapio" | "checkout" | "pix" | "fim">(
-    "cardapio",
-  );
+  const [etapa, setEtapa] = useState<
+    "cardapio" | "checkout" | "pix" | "cartao" | "fim"
+  >("cardapio");
   const [abaEscolhida, setAba] = useState<string>("");
   const aba = abaEscolhida || categorias[0] || "";
   const [carrinho, setCarrinho] = useState<Record<string, number>>({});
@@ -121,7 +121,7 @@ function ClientePage() {
       return novo;
     });
 
-  async function irParaPix() {
+  async function enviar(forma: "pix" | "cartao") {
     if (gorjeta > 0 && !garcomId) {
       setErroGarcom(true);
       return;
@@ -134,13 +134,15 @@ function ClientePage() {
       origem: "cliente",
       gorjeta,
       pago: false,
+      forma_pagamento: forma,
       linhas,
     });
     setPedidoId(r.id);
     setPendente(r.pendente);
     setEnviando(false);
-    setEtapa("pix");
+    setEtapa(forma === "pix" ? "pix" : "cartao");
   }
+
 
   if (!dados.pronto) {
     return (
@@ -373,23 +375,31 @@ function ClientePage() {
             </p>
           </div>
 
-          <div className="mt-5 flex gap-2">
+          <div className="mt-5 grid gap-2">
+            <button
+              onClick={() => void enviar("pix")}
+              disabled={enviando}
+              className="btn-base bg-primary text-primary-foreground"
+            >
+              {enviando ? "Enviando…" : "Pagar com Pix"}
+            </button>
+            <button
+              onClick={() => void enviar("cartao")}
+              disabled={enviando}
+              className="btn-base bg-accent text-accent-foreground"
+            >
+              {enviando ? "Enviando…" : "Pagar no cartão com o garçom"}
+            </button>
             <button
               onClick={() => setEtapa("cardapio")}
               className="btn-base border-2 border-border bg-card"
             >
               Voltar
             </button>
-            <button
-              onClick={irParaPix}
-              disabled={enviando}
-              className="btn-base flex-1 bg-primary text-primary-foreground"
-            >
-              {enviando ? "Enviando…" : "Pagar com Pix"}
-            </button>
           </div>
         </main>
       )}
+
 
       {etapa === "pix" && (
         <main className="mx-auto max-w-3xl px-4 pt-5">
@@ -493,6 +503,48 @@ function ClientePage() {
           </button>
         </main>
       )}
+
+      {etapa === "cartao" && (
+        <main className="mx-auto max-w-3xl px-4 pt-10 text-center">
+          <p className="text-6xl" aria-hidden>
+            {expirado ? "⏳" : "💳"}
+          </p>
+          <h1 className="mt-4 text-3xl font-extrabold">
+            {expirado
+              ? "Pedido expirado, refaça quando quiser."
+              : "Seu pedido foi enviado."}
+          </h1>
+          <p className="mt-2 text-lg text-muted-foreground">
+            {expirado
+              ? "O pagamento não foi confirmado a tempo. É só montar o pedido de novo."
+              : "O garçom vai até você com a maquininha."}
+          </p>
+          <p className="mt-3 text-2xl font-extrabold">
+            Total {formatarReal(totalGeral)}
+          </p>
+          {aindaNaFila && (
+            <p className="mt-3 text-lg font-bold">
+              Enviando… seu pedido está guardado e segue automaticamente quando
+              o sinal voltar.
+            </p>
+          )}
+          <button
+            onClick={() => {
+              setEtapa("cardapio");
+              setCarrinho({});
+              setGorjeta(5);
+              setOutroValor("");
+              setPedidoId("");
+              setPendente(false);
+            }}
+            className="btn-base mt-6 bg-primary text-primary-foreground"
+          >
+            Pedir mais alguma coisa
+          </button>
+        </main>
+      )}
+
+
 
       {etapa === "fim" && (
         <main className="mx-auto max-w-3xl px-4 pt-10 text-center">

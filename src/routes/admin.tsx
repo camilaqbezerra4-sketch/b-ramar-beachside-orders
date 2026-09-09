@@ -2,6 +2,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { AbaCardapio, AbaEquipe } from "@/components/GestaoBarraca";
+import { CampoChavePix } from "@/components/CampoChavePix";
+import { analisarChavePix } from "@/lib/chave-pix";
 import { useDados } from "@/lib/store";
 import { normalizarSlug } from "@/lib/types";
 import {
@@ -236,13 +238,8 @@ function NovaBarraca({ aoCriar }: { aoCriar: () => Promise<void> }) {
         aria-label="Endereço curto"
         className={campo}
       />
-      <input
-        value={chavePix}
-        onChange={(e) => setChavePix(e.target.value)}
-        placeholder="Chave Pix"
-        aria-label="Chave Pix"
-        className={campo}
-      />
+      <CampoChavePix valor={chavePix} aoMudar={setChavePix} />
+
       <input
         value={cidade}
         onChange={(e) => setCidade(e.target.value)}
@@ -282,12 +279,18 @@ function NovaBarraca({ aoCriar }: { aoCriar: () => Promise<void> }) {
             setErro("Preencha nome, endereço curto e um PIN de 4 a 6 dígitos.");
             return;
           }
+          const chave = analisarChavePix(chavePix);
+          if (!chave.ok) {
+            setErro("Confira a chave Pix da barraca: o formato não foi reconhecido.");
+            return;
+          }
           setSalvando(true);
           const r = await criarBarraca({
             data: {
               nome: nome.trim(),
               slug,
-              chave_pix: chavePix.trim(),
+              chave_pix: chave.valor,
+
               cidade: cidade.trim() || "Recife",
               whatsapp_suporte: whats.trim(),
               pin,
@@ -395,40 +398,57 @@ function EditarDados({ barraca }: { barraca: BarracaAdmin }) {
   const linhas: Array<[keyof BarracaAdmin, string]> = [
     ["nome", "Nome"],
     ["slug", "Endereço curto"],
-    ["chave_pix", "Chave Pix"],
     ["cidade", "Cidade"],
     ["whatsapp_suporte", "WhatsApp de suporte"],
     ["pin", "PIN do painel"],
   ];
 
+  const chave = analisarChavePix(form.chave_pix);
+
   return (
     <section className="card-praia grid gap-3 p-4">
-      {linhas.map(([chave, rotulo]) => (
-        <label key={chave} className="block text-lg font-bold">
+      {linhas.map(([campoId, rotulo]) => (
+        <label key={campoId} className="block text-lg font-bold">
           {rotulo}
           <input
-            value={String(form[chave] ?? "")}
+            value={String(form[campoId] ?? "")}
             onChange={(e) => {
               const valor =
-                chave === "slug" ? normalizarSlug(e.target.value) : e.target.value;
-              setForm({ ...form, [chave]: valor });
+                campoId === "slug"
+                  ? normalizarSlug(e.target.value)
+                  : e.target.value;
+              setForm({ ...form, [campoId]: valor });
               setSalvo(false);
             }}
             className={`mt-1 ${campo}`}
           />
         </label>
       ))}
+      <div className="text-lg font-bold">
+        Chave Pix
+        <div className="mt-1">
+          <CampoChavePix
+            valor={form.chave_pix}
+            aoMudar={(v) => {
+              setForm({ ...form, chave_pix: v });
+              setSalvo(false);
+            }}
+          />
+        </div>
+      </div>
       {erro && <p className="text-lg font-bold text-destructive">{erro}</p>}
       <button
+        disabled={!chave.ok}
         onClick={async () => {
           setErro("");
+          if (!chave.ok) return;
           const r = await atualizarBarraca({
             data: {
               id: barraca.id,
               patch: {
                 nome: form.nome,
                 slug: form.slug,
-                chave_pix: form.chave_pix,
+                chave_pix: chave.valor,
                 cidade: form.cidade,
                 whatsapp_suporte: form.whatsapp_suporte,
                 pin: form.pin,
@@ -438,10 +458,11 @@ function EditarDados({ barraca }: { barraca: BarracaAdmin }) {
           if (r.ok) setSalvo(true);
           else setErro(r.erro);
         }}
-        className="btn-base bg-primary text-primary-foreground"
+        className="btn-base bg-primary text-primary-foreground disabled:opacity-50"
       >
         Salvar
       </button>
+
       {salvo && <p className="text-lg font-bold">Dados salvos.</p>}
     </section>
   );
@@ -639,12 +660,13 @@ function BlocoLinks({ barraca }: { barraca: BarracaAdmin }) {
 
   const links: Array<[string, string]> = [
     ["Painel da barraca", `${DOMINIO}/${barraca.slug}/painel`],
+    ["Tela do garçom", `${DOMINIO}/${barraca.slug}/garcom`],
     ["Cardápio da Mesa 1", `${DOMINIO}/${barraca.slug}/mesa/1`],
     ["QR Codes das mesas", `${DOMINIO}/${barraca.slug}/qrcodes`],
   ];
 
   const whats = (barraca.whatsapp_suporte || "").replace(/\D/g, "");
-  const mensagem = `Seu painel BóraMar: ${DOMINIO}/${barraca.slug}/painel. PIN: ${barraca.pin}`;
+  const mensagem = `Seu painel BóraMar: ${DOMINIO}/${barraca.slug}/painel. Tela do garçom: ${DOMINIO}/${barraca.slug}/garcom. PIN: ${barraca.pin}`;
 
   return (
     <section className="mt-4 rounded-2xl border-2 border-border bg-background p-3">

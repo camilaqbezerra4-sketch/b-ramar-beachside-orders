@@ -4,12 +4,20 @@ import { AppHeader } from "@/components/AppHeader";
 import { SuporteWhatsApp } from "@/components/SuporteWhatsApp";
 import { AbaCardapio, AbaEquipe } from "@/components/GestaoBarraca";
 import {
+  chavePin,
+  guardarLiberacao,
+  painelLiberado,
+  TelaPin,
+} from "@/components/PortaoPin";
+import { gruposDaMesa, anterioresDeHoje, abreGrupo } from "@/lib/mesas";
+import {
   alternarQrCodeMesa,
   atualizarStatus,
   confirmarPagamento,
   criarPedido,
   encerrarPedido,
   formatarReal,
+  liberarMesa,
   useDados,
 } from "@/lib/store";
 import type { Pedido } from "@/lib/types";
@@ -86,68 +94,8 @@ function tocarSino() {
   }
 }
 
-// ---- PIN do painel, lembrado por 30 dias neste aparelho ----
-const chavePin = (slug: string) => `boramar:painel-liberado-ate:${slug}`;
+// PIN do painel: componente e utilidades em @/components/PortaoPin
 
-function painelLiberado(slug: string) {
-  if (typeof window === "undefined") return false;
-  const ate = Number(localStorage.getItem(chavePin(slug)) ?? 0);
-  return Number.isFinite(ate) && ate > Date.now();
-}
-
-function guardarLiberacao(slug: string) {
-  localStorage.setItem(chavePin(slug), String(Date.now() + 30 * 86400000));
-}
-
-function TelaPin({ pin, aoLiberar }: { pin: string; aoLiberar: () => void }) {
-  const [valor, setValor] = useState("");
-  const [erro, setErro] = useState(false);
-
-  return (
-    <div className="min-h-screen">
-      <AppHeader subtitulo="Painel" />
-      <main className="mx-auto max-w-3xl px-4 pt-8">
-        <h1 className="text-3xl font-extrabold">Painel da Barraca</h1>
-        <p className="mt-2 text-lg text-muted-foreground">
-          Digite o PIN da barraca. Este aparelho fica lembrado por 30 dias.
-        </p>
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (valor === pin && pin) aoLiberar();
-            else setErro(true);
-          }}
-          className="mt-5 grid gap-3"
-        >
-          <input
-            autoFocus
-            inputMode="numeric"
-            maxLength={6}
-            value={valor}
-            onChange={(e) => {
-              setValor(e.target.value.replace(/\D/g, ""));
-              setErro(false);
-            }}
-            aria-label="PIN do painel"
-            placeholder="••••"
-            className="w-full rounded-2xl border-2 border-border bg-card px-4 py-4 text-center text-3xl font-extrabold tracking-widest"
-          />
-          {erro && (
-            <p className="text-lg font-bold text-destructive">
-              PIN incorreto. Tente de novo.
-            </p>
-          )}
-          <button className="btn-base bg-primary text-primary-foreground">
-            Entrar no painel
-          </button>
-          <Link to="/" className="btn-base border-2 border-border bg-card">
-            Voltar ao início
-          </Link>
-        </form>
-      </main>
-    </div>
-  );
-}
 
 // ---- Rodadas da cozinha ----
 interface Rodada {
@@ -192,10 +140,25 @@ function minutosDesde(iso: string) {
   return Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / MINUTO));
 }
 
+/** Marcador de grupo da mesa mostrado no Caixa e na Cozinha. */
+function MarcadorGrupo({ novo }: { novo: boolean }) {
+  return (
+    <span
+      className={`rounded-full px-3 py-1 text-sm font-extrabold ${
+        novo
+          ? "bg-accent text-accent-foreground"
+          : "bg-muted text-muted-foreground"
+      }`}
+    >
+      {novo ? "grupo novo" : "mesmo grupo"}
+    </span>
+  );
+}
+
 function PainelPage() {
   const { slug } = Route.useParams();
   const dados = useDados(slug);
-  const { barraca, mesas, garcons, produtos, pedidos } = dados;
+  const { barraca, mesas, garcons, produtos, pedidos, liberacoes } = dados;
   const [aba, setAba] = useState<Aba>("caixa");
   const [lancando, setLancando] = useState(false);
   const [somAtivo, setSomAtivo] = useState(false);
@@ -338,6 +301,8 @@ function PainelPage() {
     return (
       <TelaPin
         pin={barraca.pin}
+        titulo="Painel da Barraca"
+        subtitulo="Painel"
         aoLiberar={() => {
           guardarLiberacao(slug);
           setLiberado(true);
@@ -368,12 +333,14 @@ function PainelPage() {
       rodada={r}
       garcomDe={nomeGarcom}
       alertas={alertas}
+      grupoNovo={abreGrupo(r.pedidos[0]!, pedidos, liberacoes)}
       prontoDesde={prontoDesde.current[r.chave]}
       aoTocar={() =>
         setAlertas((a) => a.filter((id) => !r.pedidos.some((p) => p.id === id)))
       }
     />
   );
+
 
   return (
     <div className="min-h-screen pb-28">
@@ -445,16 +412,24 @@ function PainelPage() {
               </button>
             </div>
             <p className="mt-1 text-base text-muted-foreground">
-              {pendentesCaixa.length} pedido(s) aguardando confirmação do Pix.
-              Depois de 10 minutos o pedido expira sozinho.
+              {pendentesCaixa.length} pedido(s) aguardando confirmação do
+              pagamento. Depois de 10 minutos o pedido expira sozinho.
             </p>
 
             <div className="mt-4 grid gap-3">
               {pendentesCaixa.map((p) => (
                 <article key={p.id} className="card-praia p-4">
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
-                    <h2 className="text-2xl font-extrabold">
+                    <h2 className="flex flex-wrap items-center gap-2 text-2xl font-extrabold">
                       Mesa {nomeMesa(p.mesa_id)}
+                      <MarcadorGrupo
+                        novo={abreGrupo(p, pedidos, liberacoes)}
+                      />
+                      {p.forma_pagamento === "cartao" && (
+                        <span className="rounded-full bg-accent px-3 py-1 text-sm font-extrabold text-accent-foreground">
+                          aguardando cartão
+                        </span>
+                      )}
                     </h2>
                     <span className="text-base text-muted-foreground">
                       há {minutosDesde(p.criado_em)} min · Garçom:{" "}
@@ -474,7 +449,9 @@ function PainelPage() {
                       onClick={() => confirmarPagamento(p.id)}
                       className="btn-base bg-success text-success-foreground"
                     >
-                      Confirmar pagamento
+                      {p.forma_pagamento === "cartao"
+                        ? "Recebi no cartão"
+                        : "Confirmar pagamento"}
                     </button>
                     <button
                       onClick={() => encerrarPedido(p.id, "cancelado")}
@@ -485,6 +462,7 @@ function PainelPage() {
                   </div>
                 </article>
               ))}
+
               {pendentesCaixa.length === 0 && (
                 <p className="text-lg text-muted-foreground">
                   Nenhum pedido aguardando pagamento.
@@ -543,12 +521,14 @@ function CardRodada({
   rodada,
   garcomDe,
   alertas,
+  grupoNovo,
   prontoDesde,
   aoTocar,
 }: {
   rodada: Rodada;
   garcomDe: (id: string | null) => string;
   alertas: string[];
+  grupoNovo: boolean;
   prontoDesde: number | undefined;
   aoTocar: () => void;
 }) {
@@ -600,10 +580,11 @@ function CardRodada({
       }`}
     >
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="text-2xl font-extrabold">
+        <h2 className="flex flex-wrap items-center gap-2 text-2xl font-extrabold">
           Mesa {rodada.numeroMesa}
+          <MarcadorGrupo novo={grupoNovo} />
           {rodada.numero > 1 && (
-            <span className="ml-2 rounded-full bg-primary px-3 py-1 text-sm font-extrabold text-primary-foreground">
+            <span className="rounded-full bg-primary px-3 py-1 text-sm font-extrabold text-primary-foreground">
               {rodada.numero}ª rodada
             </span>
           )}
@@ -697,12 +678,110 @@ function CardRodada({
 
 
 function AbaMesas({ slug }: { slug: string }) {
-  const { mesas } = useDados();
+  const { mesas, garcons, pedidos, liberacoes } = useDados();
+  const [aberta, setAberta] = useState<string | null>(null);
+
+  const hora = (iso: string) =>
+    new Date(iso).toLocaleTimeString("pt-BR", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  const nomeGarcom = (id: string | null) =>
+    garcons.find((g) => g.id === id)?.nome ?? "—";
+
+  const mesa = mesas.find((m) => m.id === aberta);
+  if (mesa) {
+    const { atual, anteriores } = gruposDaMesa(pedidos, liberacoes, mesa.id);
+    return (
+      <>
+        <button
+          onClick={() => setAberta(null)}
+          className="btn-base border-2 border-border bg-card"
+        >
+          ← Voltar às mesas
+        </button>
+        <h1 className="mt-3 text-3xl font-extrabold">Mesa {mesa.numero}</h1>
+        <p className="mt-1 text-lg text-muted-foreground">
+          {atual.inicio
+            ? `Ocupada desde ${hora(atual.inicio)}`
+            : "Livre no momento"}
+        </p>
+
+        <div className="mt-4 grid gap-3">
+          {atual.pedidos.map((p) => (
+            <div key={p.id} className="card-praia p-4">
+              <div className="flex flex-wrap items-baseline justify-between gap-2">
+                <p className="text-xl font-extrabold">{hora(p.criado_em)}</p>
+                <span className="text-base text-muted-foreground">
+                  {p.status} · {p.forma_pagamento === "cartao" ? "cartão" : "Pix"}{" "}
+                  · {nomeGarcom(p.garcom_id)}
+                </span>
+              </div>
+              <p className="mt-1 text-lg font-semibold">
+                {p.itens.map((i) => `${i.quantidade}× ${i.nome_produto}`).join(", ")}
+              </p>
+              <p className="mt-1 text-xl font-extrabold">
+                {formatarReal(p.total)}
+              </p>
+            </div>
+          ))}
+          {atual.pedidos.length === 0 && (
+            <p className="text-lg text-muted-foreground">
+              Nenhum pedido neste grupo.
+            </p>
+          )}
+        </div>
+
+        <p className="mt-4 text-2xl font-extrabold">
+          Total do grupo: {formatarReal(atual.total)}
+        </p>
+        <button
+          disabled={atual.pedidos.length === 0}
+          onClick={() => void liberarMesa(mesa.id)}
+          className="btn-base mt-3 bg-primary text-primary-foreground disabled:opacity-50"
+        >
+          Liberar mesa
+        </button>
+
+        <div className="mt-4 flex items-center gap-3">
+          <p className="flex-1 text-lg font-bold">Plaquinha com QR Code</p>
+          <button
+            onClick={() => alternarQrCodeMesa(mesa.id)}
+            aria-pressed={mesa.tem_qrcode}
+            className={`btn-base min-w-[9rem] ${
+              mesa.tem_qrcode
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted text-muted-foreground"
+            }`}
+          >
+            {mesa.tem_qrcode ? "Com QR Code" : "Sem QR Code"}
+          </button>
+        </div>
+
+        {anterioresDeHoje(anteriores).length > 0 && (
+          <section className="mt-6">
+            <h2 className="text-xl font-extrabold text-muted-foreground">
+              Grupos anteriores de hoje
+            </h2>
+            <div className="mt-2 grid gap-2">
+              {anterioresDeHoje(anteriores).map((g, i) => (
+                <p key={i} className="text-lg text-muted-foreground">
+                  {g.inicio ? hora(g.inicio) : "—"} até{" "}
+                  {g.fim ? hora(g.fim) : "—"} · {formatarReal(g.total)}
+                </p>
+              ))}
+            </div>
+          </section>
+        )}
+      </>
+    );
+  }
+
   return (
     <>
       <h1 className="text-3xl font-extrabold">Mesas</h1>
       <p className="mt-1 text-base text-muted-foreground">
-        Marque quais mesas já têm a plaquinha com QR Code.
+        Toque numa mesa para ver o consumo do grupo e liberar a mesa.
       </p>
       <Link
         to="/$slug/qrcodes"
@@ -714,26 +793,42 @@ function AbaMesas({ slug }: { slug: string }) {
       <div className="mt-4 grid gap-3">
         {[...mesas]
           .sort((a, b) => a.numero - b.numero)
-          .map((m) => (
-            <div key={m.id} className="card-praia flex items-center gap-3 p-4">
-              <p className="flex-1 text-xl font-extrabold">Mesa {m.numero}</p>
+          .map((m) => {
+            const { atual } = gruposDaMesa(pedidos, liberacoes, m.id);
+            const ocupada = atual.pedidos.length > 0;
+            return (
               <button
-                onClick={() => alternarQrCodeMesa(m.id)}
-                aria-pressed={m.tem_qrcode}
-                className={`btn-base min-w-[9rem] ${
-                  m.tem_qrcode
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted text-muted-foreground"
+                key={m.id}
+                onClick={() => setAberta(m.id)}
+                className={`card-praia flex items-center gap-3 p-4 text-left ${
+                  ocupada ? "border-accent" : ""
                 }`}
               >
-                {m.tem_qrcode ? "Com QR Code" : "Sem QR Code"}
+                <div className="min-w-0 flex-1">
+                  <p className="text-xl font-extrabold">Mesa {m.numero}</p>
+                  <p className="text-base text-muted-foreground">
+                    {ocupada
+                      ? `Ocupada desde ${hora(atual.inicio!)} · ${formatarReal(atual.total)}`
+                      : "Livre"}
+                  </p>
+                </div>
+                <span
+                  className={`rounded-full px-3 py-1 text-sm font-extrabold ${
+                    m.tem_qrcode
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-muted-foreground"
+                  }`}
+                >
+                  {m.tem_qrcode ? "Com QR" : "Sem QR"}
+                </span>
               </button>
-            </div>
-          ))}
+            );
+          })}
       </div>
     </>
   );
 }
+
 
 type Periodo = "hoje" | "semana" | "mes";
 
@@ -862,6 +957,8 @@ interface ResumoGrupo {
   mesas: number;
   mesasQuePediram: number;
   porMesa: number;
+  pix: number;
+  cartao: number;
 }
 
 function AbaResultados() {
@@ -879,6 +976,10 @@ function AbaResultados() {
     }
     const calc = (l: Pedido[], totalMesas: number): ResumoGrupo => {
       const faturamento = l.reduce((s, p) => s + p.total - p.gorjeta, 0);
+      const soma = (forma: "pix" | "cartao") =>
+        l
+          .filter((p) => p.forma_pagamento === forma)
+          .reduce((s, p) => s + p.total - p.gorjeta, 0);
       return {
         pedidos: l.length,
         faturamento,
@@ -886,6 +987,8 @@ function AbaResultados() {
         mesas: totalMesas,
         mesasQuePediram: new Set(l.map((p) => p.mesa_id)).size,
         porMesa: totalMesas ? faturamento / totalMesas : 0,
+        pix: soma("pix"),
+        cartao: soma("cartao"),
       };
     };
     const mesasComQr = mesas.filter((m) => m.tem_qrcode).length;
@@ -930,6 +1033,7 @@ function AbaResultados() {
         "Origem",
         "Garçom",
         "Status",
+        "Forma de pagamento",
         "Conta no faturamento",
         "Consumo",
         "Caixinha",
@@ -945,6 +1049,7 @@ function AbaResultados() {
           p.origem,
           garcons.find((g) => g.id === p.garcom_id)?.nome ?? "",
           p.status,
+          p.forma_pagamento === "cartao" ? "cartao" : "pix",
           p.pago ? "sim" : "nao",
           (p.total - p.gorjeta).toFixed(2),
           p.gorjeta.toFixed(2),
@@ -1034,6 +1139,12 @@ function Bloco({
         </span>
         <span>
           Média por pedido <strong>{formatarReal(v.ticket)}</strong>
+        </span>
+        <span>
+          Pix <strong>{formatarReal(v.pix)}</strong>
+        </span>
+        <span>
+          Cartão <strong>{formatarReal(v.cartao)}</strong>
         </span>
         {porMesa && (
           <>

@@ -2,8 +2,10 @@ import { useSyncExternalStore } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type {
   Barraca,
+  FormaPagamento,
   Garcom,
   ItemPedido,
+  LiberacaoMesa,
   Mesa,
   Pedido,
   Produto,
@@ -12,7 +14,7 @@ import type {
 
 /**
  * Camada de dados do BóraMar — Supabase + Realtime.
- * Tabelas: barracas, mesas, garcons, produtos, pedidos, itens_pedido.
+ * Tabelas: barracas, mesas, garcons, produtos, pedidos, itens_pedido, liberacoes_mesa.
  * Os dados são carregados por barraca (slug); sem slug usa a primeira barraca.
  */
 
@@ -24,6 +26,7 @@ export interface DadosBarraca {
   garcons: Garcom[];
   produtos: Produto[];
   pedidos: Pedido[];
+  liberacoes: LiberacaoMesa[];
 }
 
 const barracaVazia: Barraca = {
@@ -46,7 +49,9 @@ let estado: DadosBarraca = {
   garcons: [],
   produtos: [],
   pedidos: [],
+  liberacoes: [],
 };
+
 
 const ouvintes = new Set<() => void>();
 function avisar() {
@@ -71,7 +76,7 @@ async function carregar() {
     return;
   }
 
-  const [mesas, garcons, produtos, pedidos] = await Promise.all([
+  const [mesas, garcons, produtos, pedidos, liberacoes] = await Promise.all([
     supabase.from("mesas").select("*").eq("barraca_id", barraca.id).order("numero"),
     supabase.from("garcons").select("*").eq("barraca_id", barraca.id).order("nome"),
     supabase
@@ -86,7 +91,13 @@ async function carregar() {
       .select("*")
       .eq("barraca_id", barraca.id)
       .order("criado_em", { ascending: true }),
+    supabase
+      .from("liberacoes_mesa")
+      .select("*")
+      .eq("barraca_id", barraca.id)
+      .order("liberada_em", { ascending: true }),
   ]);
+
 
   const idsPedidos = (pedidos.data ?? []).map((p) => p.id);
   const itens = idsPedidos.length
@@ -150,14 +161,23 @@ async function carregar() {
       origem: p.origem as Pedido["origem"],
       status: p.status as StatusPedido,
       pago: p.pago,
+      forma_pagamento: ((p as { forma_pagamento?: string }).forma_pagamento ??
+        "pix") as FormaPagamento,
       total: Number(p.total),
       gorjeta: Number(p.gorjeta),
       criado_em: p.criado_em,
       pago_em: (p as { pago_em?: string | null }).pago_em ?? null,
       itens: porPedido.get(p.id) ?? [],
     })),
+    liberacoes: (liberacoes.data ?? []).map((l) => ({
+      id: l.id,
+      barraca_id: l.barraca_id,
+      mesa_id: l.mesa_id,
+      liberada_em: l.liberada_em,
+    })),
   });
 }
+
 
 function recarregar() {
   return carregar().catch((e) => {
@@ -182,6 +202,11 @@ function iniciar() {
     .on("postgres_changes", { event: "*", schema: "public", table: "itens_pedido" }, recarregarTabela)
     .on("postgres_changes", { event: "*", schema: "public", table: "produtos" }, recarregarTabela)
     .on("postgres_changes", { event: "*", schema: "public", table: "mesas" }, recarregarTabela)
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "liberacoes_mesa" },
+      recarregarTabela,
+    )
     .subscribe();
 }
 
@@ -217,9 +242,11 @@ interface PedidoPendente {
     origem: Pedido["origem"];
     status: StatusPedido;
     pago: boolean;
+    forma_pagamento: FormaPagamento;
     total: number;
     gorjeta: number;
   };
+
   itens: Array<{
     id: string;
     pedido_id: string;
@@ -309,6 +336,7 @@ export async function criarPedido(input: {
   origem: Pedido["origem"];
   gorjeta: number;
   pago: boolean;
+  forma_pagamento?: FormaPagamento;
   linhas: Array<{ produto: Produto; quantidade: number }>;
 }): Promise<{ id: string; pendente: boolean }> {
   const total =
@@ -325,9 +353,11 @@ export async function criarPedido(input: {
       origem: input.origem,
       status: "novo",
       pago: input.pago,
+      forma_pagamento: input.forma_pagamento ?? "pix",
       total,
       gorjeta: input.gorjeta,
     },
+
     itens: input.linhas.map((l) => ({
       id: novoId(),
       pedido_id: id,
@@ -467,3 +497,15 @@ export async function alternarQrCodeMesa(mesaId: string) {
 
 export const formatarReal = (v: number) =>
   v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+/** Encerra o grupo atual da mesa: os próximos pedidos começam um grupo novo. */
+export async function liberarMesa(mesaId: string) {
+  const mesa = estado.mesas.find((m) => m.id === mesaId);
+  if (!mesa) return;
+  await supabase.from("liberacoes_mesa").insert({
+    barraca_id: estado.barraca.id,
+    mesa_id: mesaId,
+    liberada_em: new Date().toISOString(),
+  });
+  await recarregar();
+}

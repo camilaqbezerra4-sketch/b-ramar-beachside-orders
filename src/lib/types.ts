@@ -9,6 +9,7 @@ export type StatusPedido =
   | "cancelado"
   | "expirado";
 export type OrigemPedido = "cliente" | "garcom";
+export type FormaPagamento = "pix" | "cartao";
 
 export interface Barraca {
   id: string;
@@ -63,12 +64,21 @@ export interface Pedido {
   origem: OrigemPedido;
   status: StatusPedido;
   pago: boolean;
+  forma_pagamento: FormaPagamento;
   total: number;
   gorjeta: number;
   criado_em: string;
   pago_em: string | null;
   itens: ItemPedido[];
 }
+
+export interface LiberacaoMesa {
+  id: string;
+  barraca_id: string;
+  mesa_id: string;
+  liberada_em: string;
+}
+
 
 export const CATEGORIAS: Categoria[] = ["Bebidas", "Porções", "Sobremesas"];
 
