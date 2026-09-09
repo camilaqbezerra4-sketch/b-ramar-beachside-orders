@@ -66,6 +66,14 @@ function ClientePage() {
   const [enviando, setEnviando] = useState(false);
   const [pendente, setPendente] = useState(false);
   const [erroGarcom, setErroGarcom] = useState(false);
+  const [rachando, setRachando] = useState(false);
+  const [pessoas, setPessoas] = useState(2);
+
+  const meuPedido = dados.pedidos.find((p) => p.id === pedidoId);
+  const expirado =
+    !!meuPedido &&
+    (meuPedido.status === "expirado" || meuPedido.status === "cancelado");
+  const porPessoa = Math.ceil((totalGeralRef(consumo, gorjeta) * 100) / pessoas) / 100;
 
   // acompanha a fila de reenvio para tirar o aviso "Enviando…" quando entrar
   const [, forcar] = useState(0);
