@@ -286,6 +286,8 @@ function PainelPage() {
     return (
       <TelaPin
         pin={barraca.pin}
+        titulo="Painel da Barraca"
+        subtitulo="Painel"
         aoLiberar={() => {
           guardarLiberacao(slug);
           setLiberado(true);
