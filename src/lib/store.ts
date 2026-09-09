@@ -497,3 +497,15 @@ export async function alternarQrCodeMesa(mesaId: string) {
 
 export const formatarReal = (v: number) =>
   v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+/** Encerra o grupo atual da mesa: os próximos pedidos começam um grupo novo. */
+export async function liberarMesa(mesaId: string) {
+  const mesa = estado.mesas.find((m) => m.id === mesaId);
+  if (!mesa) return;
+  await supabase.from("liberacoes_mesa").insert({
+    barraca_id: estado.barraca.id,
+    mesa_id: mesaId,
+    liberada_em: new Date().toISOString(),
+  });
+  await recarregar();
+}
