@@ -76,7 +76,7 @@ async function carregar() {
     return;
   }
 
-  const [mesas, garcons, produtos, pedidos] = await Promise.all([
+  const [mesas, garcons, produtos, pedidos, liberacoes] = await Promise.all([
     supabase.from("mesas").select("*").eq("barraca_id", barraca.id).order("numero"),
     supabase.from("garcons").select("*").eq("barraca_id", barraca.id).order("nome"),
     supabase
@@ -91,7 +91,13 @@ async function carregar() {
       .select("*")
       .eq("barraca_id", barraca.id)
       .order("criado_em", { ascending: true }),
+    supabase
+      .from("liberacoes_mesa")
+      .select("*")
+      .eq("barraca_id", barraca.id)
+      .order("liberada_em", { ascending: true }),
   ]);
+
 
   const idsPedidos = (pedidos.data ?? []).map((p) => p.id);
   const itens = idsPedidos.length
