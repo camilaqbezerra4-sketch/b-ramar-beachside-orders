@@ -333,12 +333,14 @@ function PainelPage() {
       rodada={r}
       garcomDe={nomeGarcom}
       alertas={alertas}
+      grupoNovo={abreGrupo(r.pedidos[0]!, pedidos, liberacoes)}
       prontoDesde={prontoDesde.current[r.chave]}
       aoTocar={() =>
         setAlertas((a) => a.filter((id) => !r.pedidos.some((p) => p.id === id)))
       }
     />
   );
+
 
   return (
     <div className="min-h-screen pb-28">
