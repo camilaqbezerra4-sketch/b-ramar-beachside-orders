@@ -182,6 +182,7 @@ function AdminPage() {
                   {b.ativa ? "Desativar" : "Reativar"}
                 </button>
               </div>
+              <BlocoLinks barraca={b} />
             </article>
           ))}
         </div>
@@ -626,6 +627,69 @@ function ImportarCardapio({ barracaId }: { barracaId: string }) {
         >
           Voltar e editar o texto
         </button>
+      </div>
+    </section>
+  );
+}
+
+const DOMINIO = "https://booramar.lovable.app";
+
+function BlocoLinks({ barraca }: { barraca: BarracaAdmin }) {
+  const [copiado, setCopiado] = useState("");
+
+  const links: Array<[string, string]> = [
+    ["Painel da barraca", `${DOMINIO}/${barraca.slug}/painel`],
+    ["Cardápio da Mesa 1", `${DOMINIO}/${barraca.slug}/mesa/1`],
+    ["QR Codes das mesas", `${DOMINIO}/${barraca.slug}/qrcodes`],
+  ];
+
+  const whats = (barraca.whatsapp_suporte || "").replace(/\D/g, "");
+  const mensagem = `Seu painel BóraMar: ${DOMINIO}/${barraca.slug}/painel. PIN: ${barraca.pin}`;
+
+  return (
+    <section className="mt-4 rounded-2xl border-2 border-border bg-background p-3">
+      <h3 className="text-xl font-extrabold">Links</h3>
+      <div className="mt-2 grid gap-3">
+        {links.map(([rotulo, url]) => (
+          <div key={url} className="grid gap-1">
+            <p className="text-base font-bold">{rotulo}</p>
+            <p className="break-all text-base text-muted-foreground">{url}</p>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(url);
+                    setCopiado(url);
+                  } catch {
+                    setCopiado("");
+                  }
+                }}
+                className="btn-base border-2 border-border bg-card"
+              >
+                {copiado === url ? "Copiado!" : "Copiar"}
+              </button>
+              <a
+                href={url}
+                target="_blank"
+                rel="noreferrer"
+                className="btn-base border-2 border-border bg-card"
+              >
+                Abrir em nova aba
+              </a>
+            </div>
+          </div>
+        ))}
+
+        {whats && (
+          <a
+            href={`https://wa.me/${whats}?text=${encodeURIComponent(mensagem)}`}
+            target="_blank"
+            rel="noreferrer"
+            className="btn-base bg-success text-success-foreground"
+          >
+            Enviar painel por WhatsApp
+          </a>
+        )}
       </div>
     </section>
   );
