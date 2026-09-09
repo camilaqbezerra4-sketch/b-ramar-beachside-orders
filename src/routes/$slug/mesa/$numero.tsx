@@ -11,14 +11,9 @@ import {
   useDados,
 } from "@/lib/store";
 import { gerarCodigoPix } from "@/lib/pix";
-import { CATEGORIAS, type Categoria } from "@/lib/types";
+import { categoriasDe } from "@/lib/types";
 
-export const Route = createFileRoute("/cliente")({
-  validateSearch: (search: Record<string, unknown>): { mesa?: number } => {
-    const bruto = search["mesa"];
-    const n = bruto != null ? Number(bruto) : NaN;
-    return Number.isFinite(n) ? { mesa: n } : {};
-  },
+export const Route = createFileRoute("/$slug/mesa/$numero")({
   head: () => ({
     meta: [
       { title: "Cardápio da Mesa — BóraMar" },
@@ -37,13 +32,11 @@ export const Route = createFileRoute("/cliente")({
   component: ClientePage,
 });
 
-const NUMERO_MESA_DEMO = 14;
-
 function ClientePage() {
-  const { mesa: mesaBuscada } = Route.useSearch();
-  const dados = useDados();
+  const { slug, numero } = Route.useParams();
+  const dados = useDados(slug);
   const { barraca, produtos, garcons } = dados;
-  const numeroDesejado = mesaBuscada ?? NUMERO_MESA_DEMO;
+  const numeroDesejado = Number(numero) || 1;
   const mesa = dados.mesas.find((m) => m.numero === numeroDesejado) ??
     dados.mesas[0] ?? {
       id: "",
@@ -52,10 +45,12 @@ function ClientePage() {
       tem_qrcode: false,
     };
 
+  const categorias = useMemo(() => categoriasDe(produtos), [produtos]);
   const [etapa, setEtapa] = useState<"cardapio" | "checkout" | "pix" | "fim">(
     "cardapio",
   );
-  const [aba, setAba] = useState<Categoria>("Bebidas");
+  const [abaEscolhida, setAba] = useState<string>("");
+  const aba = abaEscolhida || categorias[0] || "";
   const [carrinho, setCarrinho] = useState<Record<string, number>>({});
   const [gorjeta, setGorjeta] = useState(5);
   const [outroValor, setOutroValor] = useState("");
@@ -73,7 +68,6 @@ function ClientePage() {
   const expirado =
     !!meuPedido &&
     (meuPedido.status === "expirado" || meuPedido.status === "cancelado");
-  
 
   // acompanha a fila de reenvio para tirar o aviso "Enviando…" quando entrar
   const [, forcar] = useState(0);
@@ -90,10 +84,7 @@ function ClientePage() {
         .filter((l) => l.produto && l.quantidade > 0),
     [carrinho, produtos],
   );
-  const consumo = linhas.reduce(
-    (s, l) => s + l.produto.preco * l.quantidade,
-    0,
-  );
+  const consumo = linhas.reduce((s, l) => s + l.produto.preco * l.quantidade, 0);
   const totalGeral = consumo + gorjeta;
   // divisão apenas visual: arredonda os centavos para cima
   const porPessoa = Math.ceil((totalGeral * 100) / pessoas) / 100;
@@ -162,6 +153,17 @@ function ClientePage() {
     );
   }
 
+  if (!dados.existe || !barraca.ativa) {
+    return (
+      <div className="min-h-screen">
+        <AppHeader />
+        <p className="mx-auto max-w-3xl px-4 pt-8 text-xl font-bold">
+          Esta barraca não está disponível no momento.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen pb-32">
       <AppHeader subtitulo={`Mesa ${mesa.numero}`} />
@@ -169,12 +171,10 @@ function ClientePage() {
       {etapa === "cardapio" && (
         <main className="mx-auto max-w-3xl px-4 pt-5">
           <h1 className="text-3xl font-extrabold">Cardápio</h1>
-          <p className="mt-1 text-base text-muted-foreground">
-            {barraca.nome}
-          </p>
+          <p className="mt-1 text-base text-muted-foreground">{barraca.nome}</p>
 
           <div className="sticky top-[60px] z-30 -mx-4 mt-4 flex gap-2 overflow-x-auto bg-background px-4 py-3">
-            {CATEGORIAS.map((c) => (
+            {categorias.map((c) => (
               <button
                 key={c}
                 onClick={() => setAba(c)}
@@ -274,7 +274,10 @@ function ClientePage() {
 
           <ul className="card-praia mt-4 divide-y-2 divide-border p-4">
             {linhas.map((l) => (
-              <li key={l.produto.id} className="flex justify-between py-2 text-lg">
+              <li
+                key={l.produto.id}
+                className="flex justify-between py-2 text-lg"
+              >
                 <span className="font-semibold">
                   {l.quantidade}× {l.produto.nome}
                 </span>
@@ -444,7 +447,9 @@ function ClientePage() {
             </button>
             {rachando && (
               <div className="card-praia mt-3 p-4">
-                <p className="text-lg font-bold">Dividir por quantas pessoas?</p>
+                <p className="text-lg font-bold">
+                  Dividir por quantas pessoas?
+                </p>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {[2, 3, 4, 5, 6, 7, 8].map((n) => (
                     <button

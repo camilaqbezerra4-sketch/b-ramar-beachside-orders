@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import QRCode from "qrcode";
 import { useDados } from "@/lib/store";
 
-export const Route = createFileRoute("/qrcodes")({
+export const Route = createFileRoute("/$slug/qrcodes")({
   head: () => ({
     meta: [
       { title: "QR Codes das mesas — BóraMar" },
@@ -23,19 +23,24 @@ export const Route = createFileRoute("/qrcodes")({
 });
 
 function QrCodesPage() {
-  const { pronto, barraca, mesas } = useDados();
+  const { slug } = Route.useParams();
+  const { pronto, barraca, mesas } = useDados(slug);
   const comQr = [...mesas]
     .filter((m) => m.tem_qrcode)
     .sort((a, b) => a.numero - b.numero);
   const [imagens, setImagens] = useState<Record<string, string>>({});
+  const chaves = comQr.map((m) => m.id).join(",");
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     let ativo = true;
     Promise.all(
       comQr.map(async (m) => {
-        const url = `${window.location.origin}/cliente?mesa=${m.numero}`;
-        return [m.id, await QRCode.toDataURL(url, { width: 600, margin: 1 })] as const;
+        const url = `${window.location.origin}/${slug}/mesa/${m.numero}`;
+        return [
+          m.id,
+          await QRCode.toDataURL(url, { width: 600, margin: 1 }),
+        ] as const;
       }),
     ).then((pares) => {
       if (ativo) setImagens(Object.fromEntries(pares));
@@ -43,7 +48,8 @@ function QrCodesPage() {
     return () => {
       ativo = false;
     };
-  }, [comQr.map((m) => m.id).join(",")]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chaves, slug]);
 
   if (!pronto) {
     return <p className="p-6 text-xl font-bold">Preparando os QR Codes…</p>;
@@ -67,7 +73,11 @@ function QrCodesPage() {
         >
           Imprimir
         </button>
-        <Link to="/painel" className="btn-base border-2 border-border bg-card">
+        <Link
+          to="/$slug/painel"
+          params={{ slug }}
+          className="btn-base border-2 border-border bg-card"
+        >
           Voltar ao painel
         </Link>
       </div>
