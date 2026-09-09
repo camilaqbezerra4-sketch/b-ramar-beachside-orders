@@ -143,7 +143,7 @@ function minutosDesde(iso: string) {
 function PainelPage() {
   const { slug } = Route.useParams();
   const dados = useDados(slug);
-  const { barraca, mesas, garcons, produtos, pedidos } = dados;
+  const { barraca, mesas, garcons, produtos, pedidos, liberacoes } = dados;
   const [aba, setAba] = useState<Aba>("caixa");
   const [lancando, setLancando] = useState(false);
   const [somAtivo, setSomAtivo] = useState(false);
