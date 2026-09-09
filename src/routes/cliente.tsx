@@ -492,14 +492,17 @@ function ClientePage() {
       {etapa === "fim" && (
         <main className="mx-auto max-w-3xl px-4 pt-10 text-center">
           <p className="text-6xl" aria-hidden>
-            🍤
+            {expirado ? "⏳" : "🍤"}
           </p>
           <h1 className="mt-4 text-3xl font-extrabold">
-            Pedido enviado para a cozinha!
+            {expirado
+              ? "Pedido expirado, refaça quando quiser."
+              : "Pedido enviado para a cozinha!"}
           </h1>
           <p className="mt-2 text-lg text-muted-foreground">
-            A barraca vai conferir o Pix e começar o preparo. Fica tranquilo na
-            cadeira da Mesa {mesa.numero}.
+            {expirado
+              ? "O pagamento não foi confirmado a tempo. É só montar o pedido de novo."
+              : `A barraca vai conferir o Pix e começar o preparo. Fica tranquilo na cadeira da Mesa ${mesa.numero}.`}
           </p>
           {aindaNaFila && (
             <p className="mt-3 text-lg font-bold">
