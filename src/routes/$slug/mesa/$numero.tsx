@@ -375,23 +375,31 @@ function ClientePage() {
             </p>
           </div>
 
-          <div className="mt-5 flex gap-2">
+          <div className="mt-5 grid gap-2">
+            <button
+              onClick={() => void enviar("pix")}
+              disabled={enviando}
+              className="btn-base bg-primary text-primary-foreground"
+            >
+              {enviando ? "Enviando…" : "Pagar com Pix"}
+            </button>
+            <button
+              onClick={() => void enviar("cartao")}
+              disabled={enviando}
+              className="btn-base bg-accent text-accent-foreground"
+            >
+              {enviando ? "Enviando…" : "Pagar no cartão com o garçom"}
+            </button>
             <button
               onClick={() => setEtapa("cardapio")}
               className="btn-base border-2 border-border bg-card"
             >
               Voltar
             </button>
-            <button
-              onClick={irParaPix}
-              disabled={enviando}
-              className="btn-base flex-1 bg-primary text-primary-foreground"
-            >
-              {enviando ? "Enviando…" : "Pagar com Pix"}
-            </button>
           </div>
         </main>
       )}
+
 
       {etapa === "pix" && (
         <main className="mx-auto max-w-3xl px-4 pt-5">
