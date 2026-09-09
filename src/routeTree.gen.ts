@@ -10,12 +10,18 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as SlugPainelRouteImport } from './routes/$slug/painel'
 import { Route as SlugQrcodesRouteImport } from './routes/$slug/qrcodes'
 import { Route as SlugMesaNumeroRouteImport } from './routes/$slug/mesa/$numero'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SlugPainelRoute = SlugPainelRouteImport.update({
+  id: '/$slug/painel',
+  path: '/$slug/painel',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SlugQrcodesRoute = SlugQrcodesRouteImport.update({
@@ -31,30 +37,39 @@ const SlugMesaNumeroRoute = SlugMesaNumeroRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/$slug/painel': typeof SlugPainelRoute
   '/$slug/qrcodes': typeof SlugQrcodesRoute
   '/$slug/mesa/$numero': typeof SlugMesaNumeroRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/$slug/painel': typeof SlugPainelRoute
   '/$slug/qrcodes': typeof SlugQrcodesRoute
   '/$slug/mesa/$numero': typeof SlugMesaNumeroRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/$slug/painel': typeof SlugPainelRoute
   '/$slug/qrcodes': typeof SlugQrcodesRoute
   '/$slug/mesa/$numero': typeof SlugMesaNumeroRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/$slug/qrcodes' | '/$slug/mesa/$numero'
+  fullPaths: '/' | '/$slug/painel' | '/$slug/qrcodes' | '/$slug/mesa/$numero'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/$slug/qrcodes' | '/$slug/mesa/$numero'
-  id: '__root__' | '/' | '/$slug/qrcodes' | '/$slug/mesa/$numero'
+  to: '/' | '/$slug/painel' | '/$slug/qrcodes' | '/$slug/mesa/$numero'
+  id:
+    | '__root__'
+    | '/'
+    | '/$slug/painel'
+    | '/$slug/qrcodes'
+    | '/$slug/mesa/$numero'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  SlugPainelRoute: typeof SlugPainelRoute
   SlugQrcodesRoute: typeof SlugQrcodesRoute
   SlugMesaNumeroRoute: typeof SlugMesaNumeroRoute
 }
@@ -66,6 +81,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/$slug/painel': {
+      id: '/$slug/painel'
+      path: '/$slug/painel'
+      fullPath: '/$slug/painel'
+      preLoaderRoute: typeof SlugPainelRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/$slug/qrcodes': {
@@ -87,6 +109,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  SlugPainelRoute: SlugPainelRoute,
   SlugQrcodesRoute: SlugQrcodesRoute,
   SlugMesaNumeroRoute: SlugMesaNumeroRoute,
 }

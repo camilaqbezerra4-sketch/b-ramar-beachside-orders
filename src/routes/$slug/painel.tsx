@@ -538,7 +538,7 @@ function CardRodada({
   rodada: Rodada;
   garcomDe: (id: string | null) => string;
   alertas: string[];
-  prontoDesde?: number;
+  prontoDesde: number | undefined;
   aoTocar: () => void;
 }) {
   const emAlerta = rodada.pedidos.filter((p) => alertas.includes(p.id));
