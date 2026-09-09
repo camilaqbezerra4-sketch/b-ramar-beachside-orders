@@ -2,7 +2,6 @@ import { useSyncExternalStore } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type {
   Barraca,
-  Categoria,
   Garcom,
   ItemPedido,
   Mesa,
@@ -14,10 +13,12 @@ import type {
 /**
  * Camada de dados do BóraMar — Supabase + Realtime.
  * Tabelas: barracas, mesas, garcons, produtos, pedidos, itens_pedido.
+ * Os dados são carregados por barraca (slug); sem slug usa a primeira barraca.
  */
 
 export interface DadosBarraca {
   pronto: boolean;
+  existe: boolean;
   barraca: Barraca;
   mesas: Mesa[];
   garcons: Garcom[];
@@ -27,16 +28,19 @@ export interface DadosBarraca {
 
 const barracaVazia: Barraca = {
   id: "",
+  slug: "",
   nome: "",
   chave_pix: "",
   cidade: "",
   pin: "",
   whatsapp_suporte: "",
+  ativa: true,
   criado_em: new Date().toISOString(),
 };
 
 let estado: DadosBarraca = {
   pronto: false,
+  existe: true,
   barraca: barracaVazia,
   mesas: [],
   garcons: [],
@@ -54,40 +58,40 @@ function definir(patch: Partial<DadosBarraca>) {
 }
 
 let iniciado = false;
-let carregando: Promise<void> | null = null;
+let slugAtivo: string | null = null;
 
 async function carregar() {
-  const { data: barracas } = await supabase
-    .from("barracas")
-    .select("*")
-    .order("criado_em", { ascending: true })
-    .limit(1);
+  const consulta = supabase.from("barracas").select("*");
+  const { data: barracas } = slugAtivo
+    ? await consulta.eq("slug", slugAtivo).limit(1)
+    : await consulta.order("criado_em", { ascending: true }).limit(1);
   const barraca = barracas?.[0];
-  if (!barraca) return;
+  if (!barraca) {
+    definir({ pronto: true, existe: false });
+    return;
+  }
 
-  const [mesas, garcons, produtos, pedidos, itens] = await Promise.all([
-    supabase
-      .from("mesas")
-      .select("*")
-      .eq("barraca_id", barraca.id)
-      .order("numero"),
-    supabase
-      .from("garcons")
-      .select("*")
-      .eq("barraca_id", barraca.id)
-      .order("nome"),
+  const [mesas, garcons, produtos, pedidos] = await Promise.all([
+    supabase.from("mesas").select("*").eq("barraca_id", barraca.id).order("numero"),
+    supabase.from("garcons").select("*").eq("barraca_id", barraca.id).order("nome"),
     supabase
       .from("produtos")
       .select("*")
       .eq("barraca_id", barraca.id)
+      .order("categoria")
+      .order("ordem")
       .order("nome"),
     supabase
       .from("pedidos")
       .select("*")
       .eq("barraca_id", barraca.id)
       .order("criado_em", { ascending: true }),
-    supabase.from("itens_pedido").select("*"),
   ]);
+
+  const idsPedidos = (pedidos.data ?? []).map((p) => p.id);
+  const itens = idsPedidos.length
+    ? await supabase.from("itens_pedido").select("*").in("pedido_id", idsPedidos)
+    : { data: [] as never[] };
 
   const porPedido = new Map<string, ItemPedido[]>();
   for (const i of itens.data ?? []) {
@@ -105,13 +109,16 @@ async function carregar() {
 
   definir({
     pronto: true,
+    existe: true,
     barraca: {
       id: barraca.id,
+      slug: (barraca as { slug?: string }).slug ?? "",
       nome: barraca.nome,
       chave_pix: barraca.chave_pix,
       cidade: (barraca as { cidade?: string }).cidade ?? "Recife",
       pin: (barraca as { pin?: string }).pin ?? "",
       whatsapp_suporte: barraca.whatsapp_suporte,
+      ativa: (barraca as { ativa?: boolean }).ativa ?? true,
       criado_em: barraca.criado_em,
     },
     mesas: (mesas.data ?? []).map((m) => ({
@@ -130,9 +137,10 @@ async function carregar() {
       id: p.id,
       barraca_id: p.barraca_id,
       nome: p.nome,
-      categoria: p.categoria as Categoria,
+      categoria: p.categoria,
       preco: Number(p.preco),
       disponivel: p.disponivel,
+      ordem: (p as { ordem?: number }).ordem ?? 0,
     })),
     pedidos: (pedidos.data ?? []).map((p) => ({
       id: p.id,
@@ -152,38 +160,24 @@ async function carregar() {
 }
 
 function recarregar() {
-  carregando = carregar().catch((e) => {
+  return carregar().catch((e) => {
     console.error("BóraMar: falha ao carregar dados", e);
   });
-  return carregando;
 }
 
 function iniciar() {
   if (iniciado || typeof window === "undefined") return;
   iniciado = true;
   recarregar();
+  const recarregarTabela = () => {
+    recarregar();
+  };
   supabase
     .channel("boramar")
-    .on(
-      "postgres_changes",
-      { event: "*", schema: "public", table: "pedidos" },
-      () => recarregar(),
-    )
-    .on(
-      "postgres_changes",
-      { event: "*", schema: "public", table: "itens_pedido" },
-      () => recarregar(),
-    )
-    .on(
-      "postgres_changes",
-      { event: "*", schema: "public", table: "produtos" },
-      () => recarregar(),
-    )
-    .on(
-      "postgres_changes",
-      { event: "*", schema: "public", table: "mesas" },
-      () => recarregar(),
-    )
+    .on("postgres_changes", { event: "*", schema: "public", table: "pedidos" }, recarregarTabela)
+    .on("postgres_changes", { event: "*", schema: "public", table: "itens_pedido" }, recarregarTabela)
+    .on("postgres_changes", { event: "*", schema: "public", table: "produtos" }, recarregarTabela)
+    .on("postgres_changes", { event: "*", schema: "public", table: "mesas" }, recarregarTabela)
     .subscribe();
 }
 
@@ -197,7 +191,14 @@ function subscribe(fn: () => void) {
 
 const snapshot = () => estado;
 
-export function useDados(): DadosBarraca {
+/** Carrega os dados de uma barraca pelo slug (sem slug: a primeira barraca). */
+export function useDados(slug?: string): DadosBarraca {
+  const alvo = slug ?? null;
+  if (alvo !== slugAtivo) {
+    slugAtivo = alvo;
+    estado = { ...estado, pronto: false, existe: true };
+    if (iniciado) recarregar();
+  }
   return useSyncExternalStore(subscribe, snapshot, snapshot);
 }
 
@@ -371,11 +372,82 @@ export async function encerrarPedido(
   await recarregar();
 }
 
+// ---- Cardápio ----
+
 export async function atualizarProduto(
   produtoId: string,
   patch: Partial<Produto>,
 ) {
   await supabase.from("produtos").update(patch).eq("id", produtoId);
+  await recarregar();
+}
+
+export async function criarProduto(input: {
+  nome: string;
+  categoria: string;
+  preco: number;
+}) {
+  const daCategoria = estado.produtos.filter((p) => p.categoria === input.categoria);
+  await supabase.from("produtos").insert({
+    barraca_id: estado.barraca.id,
+    nome: input.nome,
+    categoria: input.categoria,
+    preco: input.preco,
+    disponivel: true,
+    ordem: daCategoria.length,
+  });
+  await recarregar();
+}
+
+export async function removerProduto(produtoId: string) {
+  await supabase.from("produtos").delete().eq("id", produtoId);
+  await recarregar();
+}
+
+export async function renomearCategoria(de: string, para: string) {
+  await supabase
+    .from("produtos")
+    .update({ categoria: para })
+    .eq("barraca_id", estado.barraca.id)
+    .eq("categoria", de);
+  await recarregar();
+}
+
+/** Move um item para cima (-1) ou para baixo (+1) dentro da categoria. */
+export async function moverProduto(produtoId: string, direcao: -1 | 1) {
+  const alvo = estado.produtos.find((p) => p.id === produtoId);
+  if (!alvo) return;
+  const lista = estado.produtos
+    .filter((p) => p.categoria === alvo.categoria)
+    .sort((a, b) => a.ordem - b.ordem || a.nome.localeCompare(b.nome));
+  const i = lista.findIndex((p) => p.id === produtoId);
+  const j = i + direcao;
+  if (j < 0 || j >= lista.length) return;
+  const outro = lista[j]!;
+  const trocado = [...lista];
+  trocado[i] = outro;
+  trocado[j] = alvo;
+  await Promise.all(
+    trocado.map((p, idx) =>
+      supabase.from("produtos").update({ ordem: idx }).eq("id", p.id),
+    ),
+  );
+  await recarregar();
+}
+
+// ---- Equipe ----
+
+export async function criarGarcom(nome: string, chavePix: string) {
+  await supabase.from("garcons").insert({
+    barraca_id: estado.barraca.id,
+    nome,
+    chave_pix: chavePix,
+  });
+  await recarregar();
+}
+
+export async function removerGarcom(garcomId: string) {
+  await supabase.from("garcons").delete().eq("id", garcomId);
   await recarregar();
 }
 
