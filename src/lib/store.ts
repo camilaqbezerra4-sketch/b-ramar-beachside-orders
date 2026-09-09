@@ -336,6 +336,7 @@ export async function criarPedido(input: {
   origem: Pedido["origem"];
   gorjeta: number;
   pago: boolean;
+  forma_pagamento?: FormaPagamento;
   linhas: Array<{ produto: Produto; quantidade: number }>;
 }): Promise<{ id: string; pendente: boolean }> {
   const total =
@@ -352,9 +353,11 @@ export async function criarPedido(input: {
       origem: input.origem,
       status: "novo",
       pago: input.pago,
+      forma_pagamento: input.forma_pagamento ?? "pix",
       total,
       gorjeta: input.gorjeta,
     },
+
     itens: input.linhas.map((l) => ({
       id: novoId(),
       pedido_id: id,
