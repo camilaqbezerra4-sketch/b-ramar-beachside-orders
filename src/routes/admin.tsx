@@ -2,6 +2,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { AbaCardapio, AbaEquipe } from "@/components/GestaoBarraca";
+import { CampoChavePix } from "@/components/CampoChavePix";
+import { analisarChavePix } from "@/lib/chave-pix";
 import { useDados } from "@/lib/store";
 import { normalizarSlug } from "@/lib/types";
 import {
