@@ -396,40 +396,57 @@ function EditarDados({ barraca }: { barraca: BarracaAdmin }) {
   const linhas: Array<[keyof BarracaAdmin, string]> = [
     ["nome", "Nome"],
     ["slug", "Endereço curto"],
-    ["chave_pix", "Chave Pix"],
     ["cidade", "Cidade"],
     ["whatsapp_suporte", "WhatsApp de suporte"],
     ["pin", "PIN do painel"],
   ];
 
+  const chave = analisarChavePix(form.chave_pix);
+
   return (
     <section className="card-praia grid gap-3 p-4">
-      {linhas.map(([chave, rotulo]) => (
-        <label key={chave} className="block text-lg font-bold">
+      {linhas.map(([campoId, rotulo]) => (
+        <label key={campoId} className="block text-lg font-bold">
           {rotulo}
           <input
-            value={String(form[chave] ?? "")}
+            value={String(form[campoId] ?? "")}
             onChange={(e) => {
               const valor =
-                chave === "slug" ? normalizarSlug(e.target.value) : e.target.value;
-              setForm({ ...form, [chave]: valor });
+                campoId === "slug"
+                  ? normalizarSlug(e.target.value)
+                  : e.target.value;
+              setForm({ ...form, [campoId]: valor });
               setSalvo(false);
             }}
             className={`mt-1 ${campo}`}
           />
         </label>
       ))}
+      <div className="text-lg font-bold">
+        Chave Pix
+        <div className="mt-1">
+          <CampoChavePix
+            valor={form.chave_pix}
+            aoMudar={(v) => {
+              setForm({ ...form, chave_pix: v });
+              setSalvo(false);
+            }}
+          />
+        </div>
+      </div>
       {erro && <p className="text-lg font-bold text-destructive">{erro}</p>}
       <button
+        disabled={!chave.ok}
         onClick={async () => {
           setErro("");
+          if (!chave.ok) return;
           const r = await atualizarBarraca({
             data: {
               id: barraca.id,
               patch: {
                 nome: form.nome,
                 slug: form.slug,
-                chave_pix: form.chave_pix,
+                chave_pix: chave.valor,
                 cidade: form.cidade,
                 whatsapp_suporte: form.whatsapp_suporte,
                 pin: form.pin,
@@ -439,10 +456,11 @@ function EditarDados({ barraca }: { barraca: BarracaAdmin }) {
           if (r.ok) setSalvo(true);
           else setErro(r.erro);
         }}
-        className="btn-base bg-primary text-primary-foreground"
+        className="btn-base bg-primary text-primary-foreground disabled:opacity-50"
       >
         Salvar
       </button>
+
       {salvo && <p className="text-lg font-bold">Dados salvos.</p>}
     </section>
   );
