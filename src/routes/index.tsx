@@ -23,7 +23,7 @@ export const Route = createFileRoute("/")({
 });
 
 function Index() {
-  const { barraca } = useDados();
+  const { barraca } = useDados("exemplo");
 
   return (
     <div className="min-h-screen">
@@ -32,14 +32,12 @@ function Index() {
         <h1 className="text-4xl font-extrabold leading-tight">
           Pedido na areia, sem fila e sem confusão.
         </h1>
-        <p className="mt-3 text-lg text-muted-foreground">
-          {barraca.nome}
-        </p>
+        <p className="mt-3 text-lg text-muted-foreground">{barraca.nome}</p>
 
         <div className="mt-8 grid gap-4">
           <Link
-            to="/cliente"
-            search={{ mesa: 14 }}
+            to="/$slug/mesa/$numero"
+            params={{ slug: "exemplo", numero: "14" }}
             className="btn-base card-praia flex-col items-start gap-1 bg-accent px-5 py-6 text-left text-accent-foreground"
           >
             <span className="text-2xl font-extrabold">Entrar como Cliente</span>
@@ -49,12 +47,23 @@ function Index() {
           </Link>
 
           <Link
-            to="/painel"
+            to="/$slug/painel"
+            params={{ slug: "exemplo" }}
             className="btn-base card-praia flex-col items-start gap-1 bg-primary px-5 py-6 text-left text-primary-foreground"
           >
             <span className="text-2xl font-extrabold">Painel da Barraca</span>
             <span className="text-base font-semibold opacity-80">
               Pedidos ao vivo, cardápio, mesas e resultados
+            </span>
+          </Link>
+
+          <Link
+            to="/admin"
+            className="btn-base card-praia flex-col items-start gap-1 border-2 border-border bg-card px-5 py-6 text-left"
+          >
+            <span className="text-2xl font-extrabold">Administração</span>
+            <span className="text-base font-semibold opacity-80">
+              Cadastrar e cuidar das barracas
             </span>
           </Link>
         </div>

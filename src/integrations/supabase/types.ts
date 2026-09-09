@@ -16,32 +16,38 @@ export type Database = {
     Tables: {
       barracas: {
         Row: {
+          ativa: boolean
           chave_pix: string
           cidade: string
           criado_em: string
           id: string
           nome: string
           pin: string
+          slug: string
           updated_at: string
           whatsapp_suporte: string
         }
         Insert: {
+          ativa?: boolean
           chave_pix?: string
           cidade?: string
           criado_em?: string
           id?: string
           nome: string
           pin?: string
+          slug: string
           updated_at?: string
           whatsapp_suporte?: string
         }
         Update: {
+          ativa?: boolean
           chave_pix?: string
           cidade?: string
           criado_em?: string
           id?: string
           nome?: string
           pin?: string
+          slug?: string
           updated_at?: string
           whatsapp_suporte?: string
         }
@@ -240,6 +246,7 @@ export type Database = {
           disponivel: boolean
           id: string
           nome: string
+          ordem: number
           preco: number
           updated_at: string
         }
@@ -250,6 +257,7 @@ export type Database = {
           disponivel?: boolean
           id?: string
           nome: string
+          ordem?: number
           preco?: number
           updated_at?: string
         }
@@ -260,6 +268,7 @@ export type Database = {
           disponivel?: boolean
           id?: string
           nome?: string
+          ordem?: number
           preco?: number
           updated_at?: string
         }

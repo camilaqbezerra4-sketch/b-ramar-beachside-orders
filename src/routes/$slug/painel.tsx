@@ -2,9 +2,9 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { SuporteWhatsApp } from "@/components/SuporteWhatsApp";
+import { AbaCardapio, AbaEquipe } from "@/components/GestaoBarraca";
 import {
   alternarQrCodeMesa,
-  atualizarProduto,
   atualizarStatus,
   confirmarPagamento,
   criarPedido,
@@ -12,16 +12,16 @@ import {
   formatarReal,
   useDados,
 } from "@/lib/store";
-import type { Pedido, Produto } from "@/lib/types";
+import type { Pedido } from "@/lib/types";
 
-export const Route = createFileRoute("/painel")({
+export const Route = createFileRoute("/$slug/painel")({
   head: () => ({
     meta: [
       { title: "Painel da Barraca — BóraMar" },
       {
         name: "description",
         content:
-          "Caixa, cozinha, cardápio, mesas e resultados do dia da barraca.",
+          "Caixa, cozinha, cardápio, equipe, mesas e resultados do dia da barraca.",
       },
       { property: "og:title", content: "Painel da Barraca — BóraMar" },
       {
@@ -37,13 +37,15 @@ type Aba =
   | "caixa"
   | "cozinha"
   | "cardapio"
+  | "equipe"
   | "mesas"
   | "resultados"
-  | "pendencias";
+  | "historico";
 
 const MINUTO = 60000;
 const LIMITE_ESPERA = 10 * MINUTO;
 const JANELA_RODADA = 5 * MINUTO;
+const LIMITE_PRONTO = 5 * MINUTO;
 
 // ---- Som (precisa de um toque do usuário para o navegador liberar) ----
 let ctxAudio: AudioContext | null = null;
@@ -84,16 +86,16 @@ function tocarSino() {
 }
 
 // ---- PIN do painel, lembrado por 30 dias neste aparelho ----
-const CHAVE_PIN = "boramar:painel-liberado-ate";
+const chavePin = (slug: string) => `boramar:painel-liberado-ate:${slug}`;
 
-function painelLiberado() {
+function painelLiberado(slug: string) {
   if (typeof window === "undefined") return false;
-  const ate = Number(localStorage.getItem(CHAVE_PIN) ?? 0);
+  const ate = Number(localStorage.getItem(chavePin(slug)) ?? 0);
   return Number.isFinite(ate) && ate > Date.now();
 }
 
-function guardarLiberacao() {
-  localStorage.setItem(CHAVE_PIN, String(Date.now() + 30 * 86400000));
+function guardarLiberacao(slug: string) {
+  localStorage.setItem(chavePin(slug), String(Date.now() + 30 * 86400000));
 }
 
 function TelaPin({ pin, aoLiberar }: { pin: string; aoLiberar: () => void }) {
@@ -111,12 +113,8 @@ function TelaPin({ pin, aoLiberar }: { pin: string; aoLiberar: () => void }) {
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            if (valor === pin && pin) {
-              guardarLiberacao();
-              aoLiberar();
-            } else {
-              setErro(true);
-            }
+            if (valor === pin && pin) aoLiberar();
+            else setErro(true);
           }}
           className="mt-5 grid gap-3"
         >
@@ -157,6 +155,7 @@ interface Rodada {
   numeroMesa: number | string;
   pedidos: Pedido[];
   emPreparo: Pedido[];
+  prontos: Pedido[];
   aguardando: Pedido[]; // pagos ainda não iniciados
   numero: number;
 }
@@ -164,17 +163,21 @@ interface Rodada {
 const instantePago = (p: Pedido) =>
   new Date(p.pago_em ?? p.criado_em).getTime();
 
+const ATIVOS: Pedido["status"][] = ["pago", "em_preparo", "pronto"];
+
 function agruparRodadas(lista: Pedido[]): Pedido[][] {
   const ordenada = [...lista].sort((a, b) => instantePago(a) - instantePago(b));
   const grupos: Pedido[][] = [];
   for (const p of ordenada) {
     const g = grupos[grupos.length - 1];
     const ultimo = g?.[g.length - 1];
-    const emPreparo = g?.some((x) => x.status === "em_preparo");
+    const aberta = g?.some(
+      (x) => x.status === "em_preparo" || x.status === "pronto",
+    );
     if (
       g &&
       ultimo &&
-      (emPreparo || instantePago(p) - instantePago(ultimo) <= JANELA_RODADA)
+      (aberta || instantePago(p) - instantePago(ultimo) <= JANELA_RODADA)
     ) {
       g.push(p);
     } else {
@@ -189,7 +192,8 @@ function minutosDesde(iso: string) {
 }
 
 function PainelPage() {
-  const dados = useDados();
+  const { slug } = Route.useParams();
+  const dados = useDados(slug);
   const { barraca, mesas, garcons, produtos, pedidos } = dados;
   const [aba, setAba] = useState<Aba>("caixa");
   const [lancando, setLancando] = useState(false);
@@ -198,10 +202,11 @@ function PainelPage() {
   const [alertas, setAlertas] = useState<string[]>([]);
   const [, forcarRelogio] = useState(0);
   const pagosConhecidos = useRef<string[] | null>(null);
+  const prontoDesde = useRef<Record<string, number>>({});
 
   useEffect(() => {
-    setLiberado(painelLiberado());
-  }, []);
+    setLiberado(painelLiberado(slug));
+  }, [slug]);
 
   // relógio para os tempos de espera e a expiração automática
   useEffect(() => {
@@ -226,7 +231,7 @@ function PainelPage() {
   // entrou item pago para preparar → alerta da cozinha
   useEffect(() => {
     const ids = pedidos
-      .filter((p) => p.pago && p.status !== "entregue")
+      .filter((p) => p.pago && ATIVOS.includes(p.status))
       .map((p) => p.id);
     if (pagosConhecidos.current === null) {
       pagosConhecidos.current = ids;
@@ -262,9 +267,7 @@ function PainelPage() {
           new Date(p.pago_em ?? p.criado_em).toDateString() === hoje,
       );
       const jaFechadas = agruparRodadas(entreguesHoje).length;
-      const ativos = daMesa.filter(
-        (p) => p.status === "pago" || p.status === "em_preparo",
-      );
+      const ativos = daMesa.filter((p) => ATIVOS.includes(p.status));
       agruparRodadas(ativos).forEach((grupo, i) => {
         saida.push({
           chave: grupo[0]!.id,
@@ -272,6 +275,7 @@ function PainelPage() {
           numeroMesa: mesa.numero,
           pedidos: grupo,
           emPreparo: grupo.filter((p) => p.status === "em_preparo"),
+          prontos: grupo.filter((p) => p.status === "pronto"),
           aguardando: grupo.filter((p) => p.status === "pago"),
           numero: jaFechadas + i + 1,
         });
@@ -280,16 +284,32 @@ function PainelPage() {
     return saida;
   }, [mesas, pedidos]);
 
-  const rodadasOrdenadas = useMemo(() => {
+  // marca desde quando cada card está pronto (para o tempo de espera)
+  useEffect(() => {
+    const agora = Date.now();
+    const mapa = prontoDesde.current;
+    for (const r of rodadas) {
+      const pronto = r.prontos.length > 0 && r.emPreparo.length === 0;
+      if (pronto && !mapa[r.chave]) mapa[r.chave] = agora;
+      if (!pronto && mapa[r.chave]) delete mapa[r.chave];
+    }
+  }, [rodadas]);
+
+  const ordenar = (lista: Rodada[]) => {
     const comAlerta = (r: Rodada) =>
       r.pedidos.some((p) => alertas.includes(p.id));
-    return [...rodadas].sort((a, b) => {
+    return [...lista].sort((a, b) => {
       if (comAlerta(a) !== comAlerta(b)) return comAlerta(a) ? -1 : 1;
       const ua = Math.max(...a.pedidos.map(instantePago));
       const ub = Math.max(...b.pedidos.map(instantePago));
       return ub - ua;
     });
-  }, [rodadas, alertas]);
+  };
+
+  const estaPronta = (r: Rodada) =>
+    r.prontos.length > 0 && r.emPreparo.length === 0;
+  const prontas = ordenar(rodadas.filter(estaPronta));
+  const emAndamento = ordenar(rodadas.filter((r) => !estaPronta(r)));
 
   if (!dados.pronto) {
     return (
@@ -302,8 +322,27 @@ function PainelPage() {
     );
   }
 
+  if (!dados.existe) {
+    return (
+      <div className="min-h-screen">
+        <AppHeader subtitulo="Painel" />
+        <p className="mx-auto max-w-3xl px-4 pt-8 text-xl font-bold">
+          Barraca não encontrada.
+        </p>
+      </div>
+    );
+  }
+
   if (!liberado) {
-    return <TelaPin pin={barraca.pin} aoLiberar={() => setLiberado(true)} />;
+    return (
+      <TelaPin
+        pin={barraca.pin}
+        aoLiberar={() => {
+          guardarLiberacao(slug);
+          setLiberado(true);
+        }}
+      />
+    );
   }
 
   const abas: Array<{ id: Aba; rotulo: string }> = [
@@ -315,10 +354,24 @@ function PainelPage() {
     },
     { id: "cozinha", rotulo: "Cozinha" },
     { id: "cardapio", rotulo: "Cardápio" },
+    { id: "equipe", rotulo: "Equipe" },
     { id: "mesas", rotulo: "Mesas" },
     { id: "resultados", rotulo: "Resultados" },
-    { id: "pendencias", rotulo: "Pendências" },
+    { id: "historico", rotulo: "Histórico" },
   ];
+
+  const cardRodada = (r: Rodada) => (
+    <CardRodada
+      key={r.chave}
+      rodada={r}
+      garcomDe={nomeGarcom}
+      alertas={alertas}
+      prontoDesde={prontoDesde.current[r.chave]}
+      aoTocar={() =>
+        setAlertas((a) => a.filter((id) => !r.pedidos.some((p) => p.id === id)))
+      }
+    />
+  );
 
   return (
     <div className="min-h-screen pb-28">
@@ -431,21 +484,17 @@ function PainelPage() {
             <p className="mt-1 text-base text-muted-foreground">
               Só aparece aqui o que já está pago.
             </p>
+
+            {prontas.length > 0 && (
+              <section className="mt-4">
+                <h2 className="text-2xl font-extrabold">Prontos pra entregar</h2>
+                <div className="mt-3 grid gap-4">{prontas.map(cardRodada)}</div>
+              </section>
+            )}
+
             <div className="mt-4 grid gap-4">
-              {rodadasOrdenadas.map((r) => (
-                <CardRodada
-                  key={r.chave}
-                  rodada={r}
-                  garcomDe={nomeGarcom}
-                  alertas={alertas}
-                  aoTocar={() =>
-                    setAlertas((a) =>
-                      a.filter((id) => !r.pedidos.some((p) => p.id === id)),
-                    )
-                  }
-                />
-              ))}
-              {rodadasOrdenadas.length === 0 && (
+              {emAndamento.map(cardRodada)}
+              {rodadas.length === 0 && (
                 <p className="text-lg text-muted-foreground">
                   Nada para preparar agora.
                 </p>
@@ -455,9 +504,10 @@ function PainelPage() {
         )}
 
         {aba === "cardapio" && <AbaCardapio produtos={produtos} />}
-        {aba === "mesas" && <AbaMesas />}
+        {aba === "equipe" && <AbaEquipe />}
+        {aba === "mesas" && <AbaMesas slug={slug} />}
         {aba === "resultados" && <AbaResultados />}
-        {aba === "pendencias" && <AbaPendencias />}
+        {aba === "historico" && <AbaHistorico />}
 
         <div className="mt-8">
           <Link to="/" className="btn-base border-2 border-border bg-card">
@@ -476,22 +526,34 @@ function CardRodada({
   rodada,
   garcomDe,
   alertas,
+  prontoDesde,
   aoTocar,
 }: {
   rodada: Rodada;
   garcomDe: (id: string | null) => string;
   alertas: string[];
+  prontoDesde: number | undefined;
   aoTocar: () => void;
 }) {
   const emAlerta = rodada.pedidos.filter((p) => alertas.includes(p.id));
-  const preparando = rodada.emPreparo.length > 0;
-  const novos = preparando ? rodada.aguardando : [];
+  const aberta = rodada.emPreparo.length > 0 || rodada.prontos.length > 0;
+  const novos = aberta ? rodada.aguardando : [];
+  const pronta = rodada.prontos.length > 0 && rodada.emPreparo.length === 0;
+  const esperaPronto = prontoDesde
+    ? Math.floor((Date.now() - prontoDesde) / MINUTO)
+    : 0;
+  const atrasado = pronta && prontoDesde
+    ? Date.now() - prontoDesde > LIMITE_PRONTO
+    : false;
 
   const somar = (lista: Pedido[]) => {
     const mapa = new Map<string, { nome: string; qtd: number }>();
     for (const p of lista)
       for (const i of p.itens) {
-        const atual = mapa.get(i.nome_produto) ?? { nome: i.nome_produto, qtd: 0 };
+        const atual = mapa.get(i.nome_produto) ?? {
+          nome: i.nome_produto,
+          qtd: 0,
+        };
         atual.qtd += i.quantidade;
         mapa.set(i.nome_produto, atual);
       }
@@ -505,17 +567,20 @@ function CardRodada({
   async function iniciarPreparo() {
     for (const p of rodada.aguardando) await atualizarStatus(p.id, "em_preparo");
   }
+  async function marcarPronto() {
+    for (const p of rodada.emPreparo) await atualizarStatus(p.id, "pronto");
+  }
   async function entregar() {
-    const prontos = preparando ? rodada.emPreparo : rodada.pedidos;
-    for (const p of prontos) await atualizarStatus(p.id, "entregue");
-    if (preparando)
-      for (const p of rodada.aguardando) await atualizarStatus(p.id, "em_preparo");
+    for (const p of rodada.prontos) await atualizarStatus(p.id, "entregue");
+    for (const p of rodada.aguardando) await atualizarStatus(p.id, "em_preparo");
   }
 
   return (
     <article
       onClick={aoTocar}
-      className={`card-praia p-4 ${emAlerta.length ? "destaque-novo border-accent" : ""}`}
+      className={`card-praia p-4 ${pronta ? "border-success bg-success/15" : ""} ${
+        emAlerta.length || atrasado ? "destaque-novo border-accent" : ""
+      }`}
     >
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="text-2xl font-extrabold">
@@ -528,14 +593,27 @@ function CardRodada({
         </h2>
         <span
           className={`rounded-full px-3 py-1 text-sm font-extrabold ${
-            preparando
-              ? "bg-primary text-primary-foreground"
-              : "bg-success text-success-foreground"
+            pronta
+              ? "bg-success text-success-foreground"
+              : rodada.emPreparo.length
+                ? "bg-primary text-primary-foreground"
+                : "bg-success text-success-foreground"
           }`}
         >
-          {preparando ? "Em preparo" : "Pago, a preparar"}
+          {pronta
+            ? "Pronto"
+            : rodada.emPreparo.length
+              ? "Em preparo"
+              : "Pago, a preparar"}
         </span>
       </div>
+
+      {pronta && (
+        <p className="mt-2 text-lg font-extrabold">
+          Esperando o garçom há {esperaPronto} min
+          {atrasado ? " — passou de 5 minutos!" : ""}
+        </p>
+      )}
 
       {emAlerta.length > 0 && novos.length > 0 && (
         <div className="mt-3 rounded-xl bg-accent p-3 text-accent-foreground">
@@ -562,7 +640,7 @@ function CardRodada({
               minute: "2-digit",
             })}{" "}
             · {formatarReal(p.total)} · Garçom: {garcomDe(p.garcom_id)}
-            {p.status === "pago" && preparando ? " · novo" : ""}
+            {p.status === "pago" && aberta ? " · novo" : ""}
           </p>
         ))}
         <p className="mt-1 text-lg font-extrabold text-foreground">
@@ -579,61 +657,29 @@ function CardRodada({
             Iniciar preparo
           </button>
         )}
-        <button
-          onClick={() => void entregar()}
-          className="btn-base border-2 border-border bg-card"
-        >
-          Entregue
-        </button>
+        {rodada.emPreparo.length > 0 && (
+          <button
+            onClick={() => void marcarPronto()}
+            className="btn-base bg-success text-success-foreground"
+          >
+            Pronto
+          </button>
+        )}
+        {rodada.prontos.length > 0 && (
+          <button
+            onClick={() => void entregar()}
+            className="btn-base bg-success px-8 py-5 text-xl text-success-foreground"
+          >
+            Entregue
+          </button>
+        )}
       </div>
     </article>
   );
 }
 
-function AbaCardapio({ produtos }: { produtos: Produto[] }) {
-  return (
-    <>
-      <h1 className="text-3xl font-extrabold">Cardápio</h1>
-      <div className="mt-4 grid gap-3">
-        {produtos.map((p) => (
-          <div key={p.id} className="card-praia flex items-center gap-3 p-4">
-            <div className="min-w-0 flex-1">
-              <p className="text-xl font-extrabold">{p.nome}</p>
-              <p className="text-base text-muted-foreground">{p.categoria}</p>
-            </div>
-            <label className="flex items-center gap-1 text-lg font-bold">
-              R$
-              <input
-                type="number"
-                step="0.5"
-                min="0"
-                value={p.preco}
-                onChange={(e) =>
-                  atualizarProduto(p.id, { preco: Number(e.target.value) })
-                }
-                aria-label={`Preço de ${p.nome}`}
-                className="w-24 rounded-xl border-2 border-border bg-background px-2 py-2 text-lg font-bold"
-              />
-            </label>
-            <button
-              onClick={() => atualizarProduto(p.id, { disponivel: !p.disponivel })}
-              aria-pressed={p.disponivel}
-              className={`btn-base min-w-[7.5rem] ${
-                p.disponivel
-                  ? "bg-success text-success-foreground"
-                  : "bg-muted text-muted-foreground"
-              }`}
-            >
-              {p.disponivel ? "Disponível" : "Acabou"}
-            </button>
-          </div>
-        ))}
-      </div>
-    </>
-  );
-}
 
-function AbaMesas() {
+function AbaMesas({ slug }: { slug: string }) {
   const { mesas } = useDados();
   return (
     <>
@@ -642,7 +688,8 @@ function AbaMesas() {
         Marque quais mesas já têm a plaquinha com QR Code.
       </p>
       <Link
-        to="/qrcodes"
+        to="/$slug/qrcodes"
+        params={{ slug }}
         className="btn-base mt-4 inline-flex bg-accent text-accent-foreground"
       >
         Gerar QR Codes
@@ -671,62 +718,121 @@ function AbaMesas() {
   );
 }
 
-function AbaPendencias() {
+type Periodo = "hoje" | "semana" | "mes";
+
+function AbaHistorico() {
   const { mesas, garcons, pedidos } = useDados();
-  const hoje = new Date().toDateString();
+  const [periodo, setPeriodo] = useState<Periodo>("hoje");
+  const [status, setStatus] = useState<string[]>(["entregue"]);
+
   const nomeMesa = (id: string) => mesas.find((m) => m.id === id)?.numero ?? "?";
   const nomeGarcom = (id: string | null) =>
     garcons.find((g) => g.id === id)?.nome ?? "—";
 
-  const aguardando = pedidos.filter((p) => !p.pago && p.status === "novo");
-  const encerrados = pedidos.filter(
-    (p) =>
-      (p.status === "expirado" || p.status === "cancelado") &&
-      new Date(p.criado_em).toDateString() === hoje,
-  );
+  const dentroDoPeriodo = (iso: string) => {
+    const d = new Date(iso).getTime();
+    if (periodo === "hoje")
+      return new Date(iso).toDateString() === new Date().toDateString();
+    const dias = periodo === "semana" ? 7 : 30;
+    return d >= Date.now() - dias * 86400000;
+  };
+
+  const lista = pedidos
+    .filter((p) => dentroDoPeriodo(p.criado_em) && status.includes(p.status))
+    .sort((a, b) => b.criado_em.localeCompare(a.criado_em));
+
+  const totalValor = lista.reduce((s, p) => s + p.total, 0);
+
+  const rotulos: Record<string, string> = {
+    entregue: "Entregues",
+    expirado: "Expirados",
+    cancelado: "Cancelados",
+  };
+
+  const alternar = (s: string) =>
+    setStatus((atual) =>
+      atual.includes(s) ? atual.filter((x) => x !== s) : [...atual, s],
+    );
 
   return (
     <>
-      <h1 className="text-3xl font-extrabold">Pendências</h1>
+      <h1 className="text-3xl font-extrabold">Histórico</h1>
 
-      <h2 className="mt-5 text-2xl font-extrabold">Aguardando Pix</h2>
-      <div className="mt-3 grid gap-3">
-        {aguardando.map((p) => (
-          <div key={p.id} className="card-praia flex flex-wrap gap-x-4 p-4 text-lg">
-            <span className="font-extrabold">Mesa {nomeMesa(p.mesa_id)}</span>
-            <span className="font-bold">{formatarReal(p.total)}</span>
-            <span className="text-muted-foreground">
-              há {minutosDesde(p.criado_em)} min · {nomeGarcom(p.garcom_id)}
-            </span>
-          </div>
+      <div className="mt-4 flex flex-wrap gap-2">
+        {(
+          [
+            ["hoje", "Hoje"],
+            ["semana", "Semana"],
+            ["mes", "Mês"],
+          ] as Array<[Periodo, string]>
+        ).map(([id, rotulo]) => (
+          <button
+            key={id}
+            onClick={() => setPeriodo(id)}
+            className={`btn-base border-2 ${
+              periodo === id
+                ? "border-primary bg-primary text-primary-foreground"
+                : "border-border bg-card"
+            }`}
+          >
+            {rotulo}
+          </button>
         ))}
-        {aguardando.length === 0 && (
-          <p className="text-lg text-muted-foreground">Nada aguardando Pix.</p>
+      </div>
+
+      <div className="mt-3 flex flex-wrap gap-2">
+        {Object.entries(rotulos).map(([id, rotulo]) => (
+          <button
+            key={id}
+            onClick={() => alternar(id)}
+            aria-pressed={status.includes(id)}
+            className={`btn-base border-2 ${
+              status.includes(id)
+                ? "border-accent bg-accent text-accent-foreground"
+                : "border-border bg-card"
+            }`}
+          >
+            {rotulo}
+          </button>
+        ))}
+      </div>
+
+      <div className="mt-4 grid gap-3">
+        {lista.map((p) => (
+          <article key={p.id} className="card-praia p-4">
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <h2 className="text-xl font-extrabold">
+                {new Date(p.criado_em).toLocaleTimeString("pt-BR", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}{" "}
+                · Mesa {nomeMesa(p.mesa_id)}
+              </h2>
+              <span className="rounded-full bg-muted px-3 py-1 text-sm font-extrabold text-muted-foreground">
+                {rotulos[p.status] ?? p.status}
+              </span>
+            </div>
+            <p className="mt-2 text-lg font-semibold">
+              {p.itens.map((i) => `${i.quantidade}× ${i.nome_produto}`).join(", ")}
+            </p>
+            <p className="mt-1 text-base text-muted-foreground">
+              Garçom: {nomeGarcom(p.garcom_id)}
+            </p>
+            <p className="mt-1 text-xl font-extrabold">
+              {formatarReal(p.total)}
+            </p>
+          </article>
+        ))}
+        {lista.length === 0 && (
+          <p className="text-lg text-muted-foreground">
+            Nenhum pedido neste filtro.
+          </p>
         )}
       </div>
 
-      <h2 className="mt-6 text-2xl font-extrabold">
-        Expirados e cancelados de hoje
-      </h2>
-      <div className="mt-3 grid gap-3">
-        {encerrados.map((p) => (
-          <div key={p.id} className="card-praia flex flex-wrap gap-x-4 p-4 text-lg">
-            <span className="font-extrabold">Mesa {nomeMesa(p.mesa_id)}</span>
-            <span className="font-bold">{formatarReal(p.total)}</span>
-            <span className="text-muted-foreground">
-              {p.status === "expirado" ? "Expirado" : "Cancelado"} ·{" "}
-              {new Date(p.criado_em).toLocaleTimeString("pt-BR", {
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
-            </span>
-          </div>
-        ))}
-        {encerrados.length === 0 && (
-          <p className="text-lg text-muted-foreground">
-            Nenhum pedido expirado ou cancelado hoje.
-          </p>
-        )}
+      <div className="card-praia mt-4 flex flex-wrap justify-between gap-3 p-4 text-lg">
+        <span className="font-bold">{lista.length} pedido(s)</span>
+        <span className="font-extrabold">{formatarReal(totalValor)}</span>
       </div>
     </>
   );
@@ -737,6 +843,7 @@ interface ResumoGrupo {
   faturamento: number;
   ticket: number;
   mesas: number;
+  mesasQuePediram: number;
   porMesa: number;
 }
 
@@ -753,18 +860,24 @@ function AbaResultados() {
       const mesa = mesas.find((m) => m.id === p.mesa_id);
       (mesa?.tem_qrcode ? comQr : semQr).push(p);
     }
-    const calc = (l: Pedido[]): ResumoGrupo => {
+    const calc = (l: Pedido[], totalMesas: number): ResumoGrupo => {
       const faturamento = l.reduce((s, p) => s + p.total - p.gorjeta, 0);
-      const qtdMesas = new Set(l.map((p) => p.mesa_id)).size;
       return {
         pedidos: l.length,
         faturamento,
         ticket: l.length ? faturamento / l.length : 0,
-        mesas: qtdMesas,
-        porMesa: qtdMesas ? faturamento / qtdMesas : 0,
+        mesas: totalMesas,
+        mesasQuePediram: new Set(l.map((p) => p.mesa_id)).size,
+        porMesa: totalMesas ? faturamento / totalMesas : 0,
       };
     };
-    return { comQr: calc(comQr), semQr: calc(semQr), total: calc(pagos) };
+    const mesasComQr = mesas.filter((m) => m.tem_qrcode).length;
+    const mesasSemQr = mesas.length - mesasComQr;
+    return {
+      comQr: calc(comQr, mesasComQr),
+      semQr: calc(semQr, mesasSemQr),
+      total: calc(pagos, mesas.length),
+    };
   };
 
   const hoje = new Date().toDateString();
@@ -909,6 +1022,12 @@ function Bloco({
           <>
             <span>
               Mesas <strong>{v.mesas}</strong>
+            </span>
+            <span>
+              Mesas que pediram{" "}
+              <strong>
+                {v.mesasQuePediram} de {v.mesas}
+              </strong>
             </span>
             <span>
               Média por mesa <strong>{formatarReal(v.porMesa)}</strong>

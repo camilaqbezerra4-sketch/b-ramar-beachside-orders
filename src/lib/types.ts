@@ -1,9 +1,10 @@
 // Tipos espelhando o schema previsto no Supabase.
-export type Categoria = "Bebidas" | "Porções" | "Sobremesas";
+export type Categoria = string;
 export type StatusPedido =
   | "novo"
   | "pago"
   | "em_preparo"
+  | "pronto"
   | "entregue"
   | "cancelado"
   | "expirado";
@@ -11,11 +12,13 @@ export type OrigemPedido = "cliente" | "garcom";
 
 export interface Barraca {
   id: string;
+  slug: string;
   nome: string;
   chave_pix: string;
   cidade: string;
   pin: string;
   whatsapp_suporte: string;
+  ativa: boolean;
   criado_em: string;
 }
 
@@ -40,6 +43,7 @@ export interface Produto {
   categoria: Categoria;
   preco: number;
   disponivel: boolean;
+  ordem: number;
 }
 
 export interface ItemPedido {
@@ -67,3 +71,21 @@ export interface Pedido {
 }
 
 export const CATEGORIAS: Categoria[] = ["Bebidas", "Porções", "Sobremesas"];
+
+/** Categorias existentes no cardápio, na ordem em que aparecem. */
+export function categoriasDe(produtos: Produto[]): Categoria[] {
+  const vistas: Categoria[] = [];
+  for (const p of produtos) if (!vistas.includes(p.categoria)) vistas.push(p.categoria);
+  return vistas.length ? vistas : CATEGORIAS;
+}
+
+/** slug seguro: minúsculas, números e hífen. */
+export function normalizarSlug(v: string) {
+  return v
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 40);
+}
