@@ -403,6 +403,12 @@ function ClientePage() {
             </p>
           )}
 
+          {expirado && (
+            <p className="card-praia mt-3 p-3 text-lg font-extrabold text-destructive">
+              Pedido expirado, refaça quando quiser.
+            </p>
+          )}
+
           <div className="card-praia mt-4 flex flex-col items-center gap-3 p-5">
             {qr ? (
               <img
