@@ -1,10 +1,10 @@
 # BóraMar — roadmap
 
 - [x] Design system (azul marinho, areia, laranja suave, fontes grandes)
-- [x] Tela inicial (Cliente / Painel da Barraca)
-- [x] Visão do cliente: cardápio por abas, carrinho, checkout, caixinha, Pix
-- [x] Painel: pedidos ao vivo, lançar pedido, cardápio, mesas, resultados + CSV
-- [x] Suporte flutuante WhatsApp
-- [x] Camada de dados no Supabase (src/lib/store.ts) com Realtime
-- [x] Tabelas criadas no Supabase do usuário + dados de exemplo
-
+- [x] Visão do cliente por barraca: /{slug}/mesa/{numero}
+- [x] Painel por barraca: /{slug}/painel com PIN
+- [x] Caixa, Cozinha (rodadas, status pronto), Cardápio, Equipe, Mesas, Resultados, Histórico
+- [x] Pix BR Code oficial + rachar a conta
+- [x] Fila offline idempotente
+- [x] QR Codes por barraca apontando para /{slug}/mesa/{numero}
+- [x] Área /admin com senha, CRUD de barracas, cardápio, equipe e importação por texto
