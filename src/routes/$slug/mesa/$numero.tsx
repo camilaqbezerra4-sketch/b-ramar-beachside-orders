@@ -121,7 +121,7 @@ function ClientePage() {
       return novo;
     });
 
-  async function irParaPix() {
+  async function enviar(forma: "pix" | "cartao") {
     if (gorjeta > 0 && !garcomId) {
       setErroGarcom(true);
       return;
@@ -134,13 +134,15 @@ function ClientePage() {
       origem: "cliente",
       gorjeta,
       pago: false,
+      forma_pagamento: forma,
       linhas,
     });
     setPedidoId(r.id);
     setPendente(r.pendente);
     setEnviando(false);
-    setEtapa("pix");
+    setEtapa(forma === "pix" ? "pix" : "cartao");
   }
+
 
   if (!dados.pronto) {
     return (
