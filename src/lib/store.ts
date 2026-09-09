@@ -172,6 +172,10 @@ function iniciar() {
   const recarregarTabela = () => {
     recarregar();
   };
+  // remove canais antigos (recarga a quente) antes de assinar de novo
+  for (const c of supabase.getChannels()) {
+    if (c.topic === "realtime:boramar") supabase.removeChannel(c);
+  }
   supabase
     .channel("boramar")
     .on("postgres_changes", { event: "*", schema: "public", table: "pedidos" }, recarregarTabela)
