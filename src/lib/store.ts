@@ -2,8 +2,10 @@ import { useSyncExternalStore } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type {
   Barraca,
+  FormaPagamento,
   Garcom,
   ItemPedido,
+  LiberacaoMesa,
   Mesa,
   Pedido,
   Produto,
@@ -12,7 +14,7 @@ import type {
 
 /**
  * Camada de dados do BóraMar — Supabase + Realtime.
- * Tabelas: barracas, mesas, garcons, produtos, pedidos, itens_pedido.
+ * Tabelas: barracas, mesas, garcons, produtos, pedidos, itens_pedido, liberacoes_mesa.
  * Os dados são carregados por barraca (slug); sem slug usa a primeira barraca.
  */
 
@@ -24,6 +26,7 @@ export interface DadosBarraca {
   garcons: Garcom[];
   produtos: Produto[];
   pedidos: Pedido[];
+  liberacoes: LiberacaoMesa[];
 }
 
 const barracaVazia: Barraca = {
@@ -46,7 +49,9 @@ let estado: DadosBarraca = {
   garcons: [],
   produtos: [],
   pedidos: [],
+  liberacoes: [],
 };
+
 
 const ouvintes = new Set<() => void>();
 function avisar() {
