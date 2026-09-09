@@ -277,12 +277,18 @@ function NovaBarraca({ aoCriar }: { aoCriar: () => Promise<void> }) {
             setErro("Preencha nome, endereço curto e um PIN de 4 a 6 dígitos.");
             return;
           }
+          const chave = analisarChavePix(chavePix);
+          if (!chave.ok) {
+            setErro("Confira a chave Pix da barraca: o formato não foi reconhecido.");
+            return;
+          }
           setSalvando(true);
           const r = await criarBarraca({
             data: {
               nome: nome.trim(),
               slug,
-              chave_pix: chavePix.trim(),
+              chave_pix: chave.valor,
+
               cidade: cidade.trim() || "Recife",
               whatsapp_suporte: whats.trim(),
               pin,
