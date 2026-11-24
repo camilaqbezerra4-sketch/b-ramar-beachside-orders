@@ -327,7 +327,7 @@ function NovaBarraca({ aoCriar }: { aoCriar: () => Promise<void> }) {
         }}
         className="btn-base bg-accent text-accent-foreground"
       >
-        {salvando ? "Criando…" : "Criar barraca com o cardápio de exemplo"}
+        {salvando ? "Criando…" : "Criar barraca"}
       </button>
     </section>
   );

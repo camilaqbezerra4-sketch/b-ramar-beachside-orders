@@ -132,22 +132,8 @@ export const criarBarraca = createServerFn({ method: "POST" })
       })),
     );
 
-    // cardápio inicial copiado da barraca de exemplo
-    const { data: exemplo } = await sb
-      .from("barracas")
-      .select("id")
-      .eq("slug", "exemplo")
-      .maybeSingle();
-    if (exemplo) {
-      const { data: produtos } = await sb
-        .from("produtos")
-        .select("nome, categoria, preco, ordem")
-        .eq("barraca_id", exemplo.id);
-      if (produtos?.length)
-        await sb.from("produtos").insert(
-          produtos.map((p) => ({ ...p, barraca_id: nova.id, disponivel: true })),
-        );
-    }
+    // a barraca nasce com o cardápio vazio: o cardápio real entra pela
+    // importação (foto → lista → "Importar cardápio") ou item a item
     return { ok: true as const, id: nova.id };
   });
 
