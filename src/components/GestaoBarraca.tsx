@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   atualizarProduto,
   criarGarcom,
@@ -103,27 +103,26 @@ export function AbaCardapio({ produtos }: { produtos: Produto[] }) {
               {daCategoria.map((p, i) => (
                 <div key={p.id} className="card-praia grid gap-3 p-4">
                   <div className="flex flex-wrap items-center gap-3">
-                    <input
-                      value={p.nome}
-                      onChange={(e) =>
-                        atualizarProduto(p.id, { nome: e.target.value })
-                      }
-                      aria-label={`Nome de ${p.nome}`}
+                    <CampoSalvaAoSair
+                      valor={p.nome}
+                      aoSalvar={(v) => {
+                        const nome = v.trim();
+                        if (nome && nome !== p.nome) void atualizarProduto(p.id, { nome });
+                      }}
+                      rotulo={`Nome de ${p.nome}`}
                       className="min-w-0 flex-1 rounded-xl border-2 border-border bg-background px-3 py-2 text-lg font-extrabold"
                     />
                     <label className="flex items-center gap-1 text-lg font-bold">
                       R$
-                      <input
-                        type="number"
-                        step="0.5"
-                        min="0"
-                        value={p.preco}
-                        onChange={(e) =>
-                          atualizarProduto(p.id, {
-                            preco: Number(e.target.value),
-                          })
-                        }
-                        aria-label={`Preço de ${p.nome}`}
+                      <CampoSalvaAoSair
+                        valor={String(p.preco)}
+                        numerico
+                        aoSalvar={(v) => {
+                          const preco = Number(v.replace(",", "."));
+                          if (Number.isFinite(preco) && preco >= 0 && preco !== p.preco)
+                            void atualizarProduto(p.id, { preco });
+                        }}
+                        rotulo={`Preço de ${p.nome}`}
                         className="w-24 rounded-xl border-2 border-border bg-background px-2 py-2 text-lg font-bold"
                       />
                     </label>
@@ -244,5 +243,47 @@ export function AbaEquipe() {
         )}
       </div>
     </>
+  );
+}
+
+/**
+ * Campo de texto que só salva quando a pessoa sai dele (ou aperta Enter),
+ * em vez de gravar a cada tecla. Evita salvar preços pela metade (ex.: "2"
+ * no meio de "25") e o campo "pular" enquanto se digita.
+ */
+function CampoSalvaAoSair({
+  valor,
+  aoSalvar,
+  rotulo,
+  className,
+  numerico = false,
+}: {
+  valor: string;
+  aoSalvar: (v: string) => void;
+  rotulo: string;
+  className: string;
+  numerico?: boolean;
+}) {
+  const [texto, setTexto] = useState(valor);
+  const [editando, setEditando] = useState(false);
+  useEffect(() => {
+    if (!editando) setTexto(valor);
+  }, [valor, editando]);
+  return (
+    <input
+      value={texto}
+      inputMode={numerico ? "decimal" : undefined}
+      onFocus={() => setEditando(true)}
+      onChange={(e) => setTexto(e.target.value)}
+      onBlur={() => {
+        setEditando(false);
+        if (texto !== valor) aoSalvar(texto);
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+      }}
+      aria-label={rotulo}
+      className={className}
+    />
   );
 }
