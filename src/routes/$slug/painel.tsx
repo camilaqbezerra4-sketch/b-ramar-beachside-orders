@@ -1321,7 +1321,7 @@ const PERGUNTAS: Array<[string, string]> = [
   ],
   [
     "Como marco que um item acabou",
-    "Vá na aba Cardápio e desligue o item na chavinha 'Disponível'. Ele some do cardápio do cliente na hora. Quando chegar mais, é só ligar de novo.",
+    "Vá na aba Cardápio e toque no botão 'Disponível' do item: ele muda para 'Acabou'. Quem abrir o cardápio a partir daí já vê o item como 'acabou'; quem já estava com o cardápio aberto recebe um aviso se tentar pedir. Quando chegar mais, é só ligar de novo.",
   ],
   [
     "Esqueci o PIN",
