@@ -653,10 +653,10 @@ function ImportarCardapio({ barracaId }: { barracaId: string }) {
   );
 }
 
-const DOMINIO = "https://booramar.lovable.app";
-
 function BlocoLinks({ barraca }: { barraca: BarracaAdmin }) {
   const [copiado, setCopiado] = useState("");
+  // Usa o endereço em que o app está publicado (Vercel, domínio próprio etc.).
+  const DOMINIO = typeof window !== "undefined" ? window.location.origin : "";
 
   const links: Array<[string, string]> = [
     ["Painel da barraca", `${DOMINIO}/${barraca.slug}/painel`],
