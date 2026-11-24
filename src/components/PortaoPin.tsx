@@ -1,34 +1,22 @@
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { AppHeader } from "@/components/AppHeader";
+import { entrarComPin } from "@/lib/store";
 
-// PIN lembrado neste aparelho por 30 dias, por barraca.
-export const chavePin = (slug: string) =>
-  `boramar:painel-liberado-ate:${slug}`;
-
-export function painelLiberado(slug: string) {
-  if (typeof window === "undefined") return false;
-  const ate = Number(localStorage.getItem(chavePin(slug)) ?? 0);
-  return Number.isFinite(ate) && ate > Date.now();
-}
-
-export function guardarLiberacao(slug: string) {
-  localStorage.setItem(chavePin(slug), String(Date.now() + 30 * 86400000));
-}
-
+// O PIN é conferido no servidor. Se estiver certo, o servidor guarda um
+// cookie assinado e este aparelho fica liberado por 30 dias.
 export function TelaPin({
-  pin,
+  slug,
   titulo,
   subtitulo,
-  aoLiberar,
 }: {
-  pin: string;
+  slug: string;
   titulo: string;
   subtitulo: string;
-  aoLiberar: () => void;
 }) {
   const [valor, setValor] = useState("");
   const [erro, setErro] = useState(false);
+  const [conferindo, setConferindo] = useState(false);
 
   return (
     <div className="min-h-screen">
@@ -39,10 +27,18 @@ export function TelaPin({
           Digite o PIN da barraca. Este aparelho fica lembrado por 30 dias.
         </p>
         <form
-          onSubmit={(e) => {
+          onSubmit={async (e) => {
             e.preventDefault();
-            if (valor === pin && pin) aoLiberar();
-            else setErro(true);
+            if (!valor || conferindo) return;
+            setConferindo(true);
+            try {
+              const ok = await entrarComPin(slug, valor);
+              if (!ok) setErro(true);
+            } catch {
+              setErro(true);
+            } finally {
+              setConferindo(false);
+            }
           }}
           className="mt-5 grid gap-3"
         >
@@ -61,11 +57,11 @@ export function TelaPin({
           />
           {erro && (
             <p className="text-lg font-bold text-destructive">
-              PIN incorreto. Tente de novo.
+              PIN incorreto ou sem internet. Tente de novo.
             </p>
           )}
-          <button className="btn-base bg-primary text-primary-foreground">
-            Entrar
+          <button disabled={conferindo} className="btn-base bg-primary text-primary-foreground">
+            {conferindo ? "Conferindo…" : "Entrar"}
           </button>
           <Link to="/" className="btn-base border-2 border-border bg-card">
             Voltar ao início

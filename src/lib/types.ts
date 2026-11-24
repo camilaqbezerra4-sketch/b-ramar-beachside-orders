@@ -17,7 +17,6 @@ export interface Barraca {
   nome: string;
   chave_pix: string;
   cidade: string;
-  pin: string;
   whatsapp_suporte: string;
   ativa: boolean;
   criado_em: string;

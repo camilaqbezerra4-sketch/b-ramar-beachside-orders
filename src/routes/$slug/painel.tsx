@@ -3,22 +3,20 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { SuporteWhatsApp } from "@/components/SuporteWhatsApp";
 import { AbaCardapio, AbaEquipe } from "@/components/GestaoBarraca";
-import {
-  chavePin,
-  guardarLiberacao,
-  painelLiberado,
-  TelaPin,
-} from "@/components/PortaoPin";
+import { TelaPin } from "@/components/PortaoPin";
 import { gruposDaMesa, anterioresDeHoje, abreGrupo } from "@/lib/mesas";
 import {
   alternarQrCodeMesa,
   atualizarStatus,
+  avisoDoPedido,
   confirmarPagamento,
   criarPedido,
   encerrarPedido,
   formatarReal,
   liberarMesa,
+  sairDoPainel,
   useDados,
+  useHistorico,
 } from "@/lib/store";
 import type { Pedido } from "@/lib/types";
 
@@ -52,7 +50,6 @@ type Aba =
   | "ajuda";
 
 const MINUTO = 60000;
-const LIMITE_ESPERA = 10 * MINUTO;
 const JANELA_RODADA = 5 * MINUTO;
 const LIMITE_PRONTO = 5 * MINUTO;
 
@@ -162,15 +159,10 @@ function PainelPage() {
   const [aba, setAba] = useState<Aba>("caixa");
   const [lancando, setLancando] = useState(false);
   const [somAtivo, setSomAtivo] = useState(false);
-  const [liberado, setLiberado] = useState(false);
   const [alertas, setAlertas] = useState<string[]>([]);
   const [, forcarRelogio] = useState(0);
   const pagosConhecidos = useRef<string[] | null>(null);
   const prontoDesde = useRef<Record<string, number>>({});
-
-  useEffect(() => {
-    setLiberado(painelLiberado(slug));
-  }, [slug]);
 
   // relógio para os tempos de espera e a expiração automática
   useEffect(() => {
@@ -183,14 +175,8 @@ function PainelPage() {
     [pedidos],
   );
 
-  // pedido aguardando Pix há mais de 10 minutos expira sozinho
-  useEffect(() => {
-    for (const p of pendentesCaixa) {
-      if (Date.now() - new Date(p.criado_em).getTime() > LIMITE_ESPERA) {
-        void encerrarPedido(p.id, "expirado");
-      }
-    }
-  });
+  // pedido aguardando Pix há mais de 10 minutos expira sozinho: quem faz
+  // isso agora é o servidor, a cada carga do painel e a cada consulta do cliente
 
   // entrou item pago para preparar → alerta da cozinha
   useEffect(() => {
@@ -297,18 +283,8 @@ function PainelPage() {
     );
   }
 
-  if (!liberado) {
-    return (
-      <TelaPin
-        pin={barraca.pin}
-        titulo="Painel da Barraca"
-        subtitulo="Painel"
-        aoLiberar={() => {
-          guardarLiberacao(slug);
-          setLiberado(true);
-        }}
-      />
-    );
+  if (!dados.liberado) {
+    return <TelaPin slug={slug} titulo="Painel da Barraca" subtitulo="Painel" />;
   }
 
   const abas: Array<{ id: Aba; rotulo: string }> = [
@@ -349,10 +325,7 @@ function PainelPage() {
         subtitulo="Painel"
         acao={
           <button
-            onClick={() => {
-              localStorage.removeItem(chavePin(slug));
-              setLiberado(false);
-            }}
+            onClick={() => void sairDoPainel(slug)}
             className="rounded-full bg-primary-foreground/15 px-3 py-1 text-sm font-bold"
           >
             Sair
@@ -833,8 +806,12 @@ function AbaMesas({ slug }: { slug: string }) {
 type Periodo = "hoje" | "semana" | "mes";
 
 function AbaHistorico() {
-  const { mesas, garcons, pedidos } = useDados();
+  const { mesas, garcons } = useDados();
   const [periodo, setPeriodo] = useState<Periodo>("hoje");
+  const historico = useHistorico(
+    periodo === "hoje" ? 1 : periodo === "semana" ? 7 : 30,
+  );
+  const pedidos = historico.pedidos;
   const [status, setStatus] = useState<string[]>(["entregue"]);
 
   const nomeMesa = (id: string) => mesas.find((m) => m.id === id)?.numero ?? "?";
@@ -869,6 +846,15 @@ function AbaHistorico() {
   return (
     <>
       <h1 className="text-3xl font-extrabold">Histórico</h1>
+
+      {historico.carregando && (
+        <p className="mt-2 text-lg font-bold text-muted-foreground">Carregando…</p>
+      )}
+      {historico.erro && (
+        <p className="mt-2 text-lg font-bold text-destructive">
+          Não deu para carregar. Confira a internet e abra a aba de novo.
+        </p>
+      )}
 
       <div className="mt-4 flex flex-wrap gap-2">
         {(
@@ -962,8 +948,10 @@ interface ResumoGrupo {
 }
 
 function AbaResultados() {
-  const { mesas, garcons, pedidos } = useDados();
+  const { mesas, garcons } = useDados();
   const [dias, setDias] = useState(7);
+  const historico = useHistorico(dias);
+  const pedidos = historico.pedidos;
 
   const resumo = (lista: Pedido[]) => {
     // Todos os números consideram apenas pedidos pagos.
@@ -1071,6 +1059,15 @@ function AbaResultados() {
   return (
     <>
       <h1 className="text-3xl font-extrabold">Resultados</h1>
+
+      {historico.carregando && (
+        <p className="mt-2 text-lg font-bold text-muted-foreground">Carregando…</p>
+      )}
+      {historico.erro && (
+        <p className="mt-2 text-lg font-bold text-destructive">
+          Não deu para carregar. Confira a internet e abra a aba de novo.
+        </p>
+      )}
 
       <Bloco titulo="Hoje" r={rDia} />
 
@@ -1284,15 +1281,19 @@ function LancarPedido({ aoFechar }: { aoFechar: () => void }) {
             disabled={linhas.length === 0 || enviando}
             onClick={async () => {
               setEnviando(true);
-              await criarPedido({
+              const r = await criarPedido({
                 mesa_id: mesaId,
                 garcom_id: garcomId || null,
                 origem: "garcom",
                 gorjeta: 0,
-                pago: false,
                 linhas,
               });
               setEnviando(false);
+              const aviso = avisoDoPedido(r);
+              if (aviso) {
+                window.alert(aviso);
+                return;
+              }
               aoFechar();
             }}
             className="btn-base bg-primary px-6 text-primary-foreground"

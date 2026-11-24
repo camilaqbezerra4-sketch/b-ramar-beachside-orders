@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AppHeader } from "@/components/AppHeader";
-import { useDados } from "@/lib/store";
+import { useCardapio } from "@/lib/store";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -22,7 +22,7 @@ export const Route = createFileRoute("/")({
 });
 
 function Index() {
-  const { barraca } = useDados("exemplo");
+  const { barraca } = useCardapio("exemplo");
   const numero = (barraca.whatsapp_suporte || "").replace(/\D/g, "");
 
   return (

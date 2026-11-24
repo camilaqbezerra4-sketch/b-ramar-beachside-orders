@@ -5,10 +5,12 @@ import { AppHeader } from "@/components/AppHeader";
 import { SuporteWhatsApp } from "@/components/SuporteWhatsApp";
 import {
   assinarFila,
+  avisoDoPedido,
   criarPedido,
   formatarReal,
   pedidosPendentes,
-  useDados,
+  useCardapio,
+  useSituacaoPedido,
 } from "@/lib/store";
 import { gerarCodigoPix } from "@/lib/pix";
 import { categoriasDe } from "@/lib/types";
@@ -19,8 +21,7 @@ export const Route = createFileRoute("/$slug/mesa/$numero")({
       { title: "Cardápio da Mesa — BóraMar" },
       {
         name: "description",
-        content:
-          "Peça bebidas e porções direto da sua mesa e pague no Pix, sem taxa nenhuma.",
+        content: "Peça bebidas e porções direto da sua mesa e pague no Pix, sem taxa nenhuma.",
       },
       { property: "og:title", content: "Cardápio da Mesa — BóraMar" },
       {
@@ -34,21 +35,16 @@ export const Route = createFileRoute("/$slug/mesa/$numero")({
 
 function ClientePage() {
   const { slug, numero } = Route.useParams();
-  const dados = useDados(slug);
+  const dados = useCardapio(slug);
   const { barraca, produtos, garcons } = dados;
-  const numeroDesejado = Number(numero) || 1;
-  const mesa = dados.mesas.find((m) => m.numero === numeroDesejado) ??
-    dados.mesas[0] ?? {
-      id: "",
-      barraca_id: "",
-      numero: numeroDesejado,
-      tem_qrcode: false,
-    };
+  const numeroDesejado = Number(numero);
+  // sem "plano B": mesa que não existe não recebe pedido de outra mesa
+  const mesa = dados.mesas.find((m) => m.numero === numeroDesejado);
 
   const categorias = useMemo(() => categoriasDe(produtos), [produtos]);
-  const [etapa, setEtapa] = useState<
-    "cardapio" | "checkout" | "pix" | "cartao" | "fim"
-  >("cardapio");
+  const [etapa, setEtapa] = useState<"cardapio" | "checkout" | "pix" | "cartao" | "fim">(
+    "cardapio",
+  );
   const [abaEscolhida, setAba] = useState<string>("");
   const aba = abaEscolhida || categorias[0] || "";
   const [carrinho, setCarrinho] = useState<Record<string, number>>({});
@@ -63,11 +59,16 @@ function ClientePage() {
   const [erroGarcom, setErroGarcom] = useState(false);
   const [rachando, setRachando] = useState(false);
   const [pessoas, setPessoas] = useState(2);
+  const [aviso, setAviso] = useState("");
+  // total gravado pelo servidor (preços conferidos no banco)
+  const [totalConfirmado, setTotalConfirmado] = useState<number | null>(null);
 
-  const meuPedido = dados.pedidos.find((p) => p.id === pedidoId);
+  const situacao = useSituacaoPedido(
+    pedidoId,
+    etapa === "pix" || etapa === "cartao" || etapa === "fim",
+  );
   const expirado =
-    !!meuPedido &&
-    (meuPedido.status === "expirado" || meuPedido.status === "cancelado");
+    !!situacao && (situacao.status === "expirado" || situacao.status === "cancelado");
 
   // acompanha a fila de reenvio para tirar o aviso "Enviando…" quando entrar
   const [, forcar] = useState(0);
@@ -81,11 +82,13 @@ function ClientePage() {
           produto: produtos.find((p) => p.id === id)!,
           quantidade,
         }))
-        .filter((l) => l.produto && l.quantidade > 0),
+        .filter((l) => l.produto && l.produto.disponivel && l.quantidade > 0),
     [carrinho, produtos],
   );
   const consumo = linhas.reduce((s, l) => s + l.produto.preco * l.quantidade, 0);
-  const totalGeral = consumo + gorjeta;
+  const totalCarrinho = consumo + gorjeta;
+  // depois de enviado, vale o total que o servidor gravou
+  const totalGeral = totalConfirmado ?? totalCarrinho;
   // divisão apenas visual: arredonda os centavos para cima
   const porPessoa = Math.ceil((totalGeral * 100) / pessoas) / 100;
 
@@ -126,31 +129,60 @@ function ClientePage() {
       setErroGarcom(true);
       return;
     }
+    if (!mesa) return;
     setErroGarcom(false);
+    setAviso("");
     setEnviando(true);
     const r = await criarPedido({
+      slug,
       mesa_id: mesa.id,
       garcom_id: garcomId || null,
       origem: "cliente",
       gorjeta,
-      pago: false,
       forma_pagamento: forma,
       linhas,
     });
+    setEnviando(false);
+    const problema = avisoDoPedido(r);
+    if (problema) {
+      setAviso(problema);
+      if (!r.pendente && "resultado" in r && !r.resultado.ok) {
+        if (r.resultado.motivo === "garcom") setErroGarcom(true);
+        // algo acabou: busca o cardápio atualizado (itens que acabaram saem do carrinho)
+        if (r.resultado.motivo === "indisponivel") dados.recarregar();
+      }
+      return;
+    }
     setPedidoId(r.id);
     setPendente(r.pendente);
-    setEnviando(false);
+    setTotalConfirmado(
+      !r.pendente && "resultado" in r && r.resultado.ok ? r.resultado.total : null,
+    );
     setEtapa(forma === "pix" ? "pix" : "cartao");
   }
-
 
   if (!dados.pronto) {
     return (
       <div className="min-h-screen">
         <AppHeader subtitulo="Carregando" />
-        <p className="mx-auto max-w-3xl px-4 pt-8 text-xl font-bold">
-          Carregando o cardápio…
-        </p>
+        <p className="mx-auto max-w-3xl px-4 pt-8 text-xl font-bold">Carregando o cardápio…</p>
+      </div>
+    );
+  }
+
+  if (dados.erro) {
+    return (
+      <div className="min-h-screen">
+        <AppHeader />
+        <main className="mx-auto max-w-3xl px-4 pt-8">
+          <p className="text-xl font-bold">Não deu para abrir o cardápio. Confira a internet.</p>
+          <button
+            onClick={() => dados.recarregar()}
+            className="btn-base mt-4 bg-primary text-primary-foreground"
+          >
+            Tentar de novo
+          </button>
+        </main>
       </div>
     );
   }
@@ -162,6 +194,21 @@ function ClientePage() {
         <p className="mx-auto max-w-3xl px-4 pt-8 text-xl font-bold">
           Esta barraca não está disponível no momento.
         </p>
+      </div>
+    );
+  }
+
+  if (!mesa) {
+    return (
+      <div className="min-h-screen">
+        <AppHeader titulo={barraca.nome} />
+        <main className="mx-auto max-w-3xl px-4 pt-8">
+          <p className="text-2xl font-extrabold">Mesa {numero} não encontrada nesta barraca.</p>
+          <p className="mt-2 text-lg text-muted-foreground">
+            Chame o garçom para fazer o seu pedido.
+          </p>
+        </main>
+        <SuporteWhatsApp numero={barraca.whatsapp_suporte} />
       </div>
     );
   }
@@ -253,9 +300,7 @@ function ClientePage() {
                   <p className="text-sm font-bold text-muted-foreground">
                     {linhas.reduce((s, l) => s + l.quantidade, 0)} itens
                   </p>
-                  <p className="text-2xl font-extrabold">
-                    {formatarReal(consumo)}
-                  </p>
+                  <p className="text-2xl font-extrabold">{formatarReal(consumo)}</p>
                 </div>
                 <button
                   onClick={() => setEtapa("checkout")}
@@ -276,10 +321,7 @@ function ClientePage() {
 
           <ul className="card-praia mt-4 divide-y-2 divide-border p-4">
             {linhas.map((l) => (
-              <li
-                key={l.produto.id}
-                className="flex justify-between py-2 text-lg"
-              >
+              <li key={l.produto.id} className="flex justify-between py-2 text-lg">
                 <span className="font-semibold">
                   {l.quantidade}× {l.produto.nome}
                 </span>
@@ -352,8 +394,7 @@ function ClientePage() {
           </div>
           {erroGarcom && (
             <p className="mt-2 text-lg font-bold text-destructive">
-              Escolha quem te atendeu para deixar a caixinha, ou toque em “Sem
-              caixinha”.
+              Escolha quem te atendeu para deixar a caixinha, ou toque em “Sem caixinha”.
             </p>
           )}
 
@@ -374,6 +415,10 @@ function ClientePage() {
               Sem taxa de serviço e sem taxa de aplicativo.
             </p>
           </div>
+
+          {aviso && (
+            <p className="card-praia mt-4 p-3 text-lg font-bold text-destructive">{aviso}</p>
+          )}
 
           <div className="mt-5 grid gap-2">
             <button
@@ -400,19 +445,17 @@ function ClientePage() {
         </main>
       )}
 
-
       {etapa === "pix" && (
         <main className="mx-auto max-w-3xl px-4 pt-5">
           <h1 className="text-3xl font-extrabold">Pague no Pix</h1>
           <p className="mt-1 text-lg">
-            Mesa {mesa.numero} · Total{" "}
-            <strong>{formatarReal(totalGeral)}</strong>
+            Mesa {mesa.numero} · Total <strong>{formatarReal(totalGeral)}</strong>
           </p>
 
           {aindaNaFila && (
             <p className="card-praia mt-3 p-3 text-lg font-bold">
-              Enviando… a internet caiu, mas seu pedido está guardado e vai
-              sozinho assim que o sinal voltar.
+              Enviando… a internet caiu, mas seu pedido está guardado e vai sozinho assim que o
+              sinal voltar.
             </p>
           )}
 
@@ -424,11 +467,7 @@ function ClientePage() {
 
           <div className="card-praia mt-4 flex flex-col items-center gap-3 p-5">
             {qr ? (
-              <img
-                src={qr}
-                alt="QR Code do Pix da barraca"
-                className="h-64 w-64 rounded-xl"
-              />
+              <img src={qr} alt="QR Code do Pix da barraca" className="h-64 w-64 rounded-xl" />
             ) : (
               <div className="h-64 w-64 animate-pulse rounded-xl bg-sand" />
             )}
@@ -457,9 +496,7 @@ function ClientePage() {
             </button>
             {rachando && (
               <div className="card-praia mt-3 p-4">
-                <p className="text-lg font-bold">
-                  Dividir por quantas pessoas?
-                </p>
+                <p className="text-lg font-bold">Dividir por quantas pessoas?</p>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {[2, 3, 4, 5, 6, 7, 8].map((n) => (
                     <button
@@ -475,12 +512,9 @@ function ClientePage() {
                     </button>
                   ))}
                 </div>
-                <p className="mt-3 text-2xl font-extrabold">
-                  {formatarReal(porPessoa)} por pessoa
-                </p>
+                <p className="mt-3 text-2xl font-extrabold">{formatarReal(porPessoa)} por pessoa</p>
                 <p className="mt-1 text-base text-muted-foreground">
-                  O Pix continua um só, com o valor total de{" "}
-                  {formatarReal(totalGeral)}.
+                  O Pix continua um só, com o valor total de {formatarReal(totalGeral)}.
                 </p>
               </div>
             )}
@@ -496,7 +530,10 @@ function ClientePage() {
             Já paguei, enviar pedido para a cozinha
           </button>
           <button
-            onClick={() => setEtapa("checkout")}
+            onClick={() => {
+              setTotalConfirmado(null);
+              setEtapa("checkout");
+            }}
             className="btn-base mt-3 w-full border-2 border-border bg-card"
           >
             Voltar
@@ -510,22 +547,17 @@ function ClientePage() {
             {expirado ? "⏳" : "💳"}
           </p>
           <h1 className="mt-4 text-3xl font-extrabold">
-            {expirado
-              ? "Pedido expirado, refaça quando quiser."
-              : "Seu pedido foi enviado."}
+            {expirado ? "Pedido expirado, refaça quando quiser." : "Seu pedido foi enviado."}
           </h1>
           <p className="mt-2 text-lg text-muted-foreground">
             {expirado
               ? "O pagamento não foi confirmado a tempo. É só montar o pedido de novo."
               : "O garçom vai até você com a maquininha."}
           </p>
-          <p className="mt-3 text-2xl font-extrabold">
-            Total {formatarReal(totalGeral)}
-          </p>
+          <p className="mt-3 text-2xl font-extrabold">Total {formatarReal(totalGeral)}</p>
           {aindaNaFila && (
             <p className="mt-3 text-lg font-bold">
-              Enviando… seu pedido está guardado e segue automaticamente quando
-              o sinal voltar.
+              Enviando… seu pedido está guardado e segue automaticamente quando o sinal voltar.
             </p>
           )}
           <button
@@ -536,6 +568,8 @@ function ClientePage() {
               setOutroValor("");
               setPedidoId("");
               setPendente(false);
+              setTotalConfirmado(null);
+              setAviso("");
             }}
             className="btn-base mt-6 bg-primary text-primary-foreground"
           >
@@ -544,17 +578,13 @@ function ClientePage() {
         </main>
       )}
 
-
-
       {etapa === "fim" && (
         <main className="mx-auto max-w-3xl px-4 pt-10 text-center">
           <p className="text-6xl" aria-hidden>
             {expirado ? "⏳" : "🍤"}
           </p>
           <h1 className="mt-4 text-3xl font-extrabold">
-            {expirado
-              ? "Pedido expirado, refaça quando quiser."
-              : "Pedido enviado para a cozinha!"}
+            {expirado ? "Pedido expirado, refaça quando quiser." : "Pedido enviado para a cozinha!"}
           </h1>
           <p className="mt-2 text-lg text-muted-foreground">
             {expirado
@@ -563,8 +593,7 @@ function ClientePage() {
           </p>
           {aindaNaFila && (
             <p className="mt-3 text-lg font-bold">
-              Enviando… seu pedido está guardado e segue automaticamente quando
-              o sinal voltar.
+              Enviando… seu pedido está guardado e segue automaticamente quando o sinal voltar.
             </p>
           )}
           <button
@@ -574,6 +603,8 @@ function ClientePage() {
               setOutroValor("");
               setPedidoId("");
               setPendente(false);
+              setTotalConfirmado(null);
+              setAviso("");
             }}
             className="btn-base mt-6 bg-primary text-primary-foreground"
           >

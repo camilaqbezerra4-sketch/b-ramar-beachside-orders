@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
-import { useDados } from "@/lib/store";
+import { useCardapio } from "@/lib/store";
 
 export const Route = createFileRoute("/$slug/qrcodes")({
   head: () => ({
@@ -24,7 +24,7 @@ export const Route = createFileRoute("/$slug/qrcodes")({
 
 function QrCodesPage() {
   const { slug } = Route.useParams();
-  const { pronto, barraca, mesas } = useDados(slug);
+  const { pronto, barraca, mesas } = useCardapio(slug);
   const comQr = [...mesas]
     .filter((m) => m.tem_qrcode)
     .sort((a, b) => a.numero - b.numero);

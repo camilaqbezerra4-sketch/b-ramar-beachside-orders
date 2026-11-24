@@ -1,13 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { AppHeader } from "@/components/AppHeader";
-import {
-  guardarLiberacao,
-  painelLiberado,
-  TelaPin,
-} from "@/components/PortaoPin";
+import { TelaPin } from "@/components/PortaoPin";
 import {
   atualizarStatus,
+  avisoDoPedido,
   confirmarPagamento,
   criarPedido,
   formatarReal,
@@ -40,12 +37,8 @@ function GarcomPage() {
   const { slug } = Route.useParams();
   const dados = useDados(slug);
   const { barraca, mesas, garcons, produtos, pedidos } = dados;
-  const [liberado, setLiberado] = useState(false);
   const [lancando, setLancando] = useState(false);
 
-  useEffect(() => {
-    setLiberado(painelLiberado(slug));
-  }, [slug]);
 
   const nomeMesa = (id: string) =>
     mesas.find((m) => m.id === id)?.numero ?? "?";
@@ -77,18 +70,8 @@ function GarcomPage() {
     );
   }
 
-  if (!liberado) {
-    return (
-      <TelaPin
-        pin={barraca.pin}
-        titulo="Tela do Garçom"
-        subtitulo="Garçom"
-        aoLiberar={() => {
-          guardarLiberacao(slug);
-          setLiberado(true);
-        }}
-      />
-    );
+  if (!dados.liberado) {
+    return <TelaPin slug={slug} titulo="Tela do Garçom" subtitulo="Garçom" />;
   }
 
   if (lancando) {
@@ -295,16 +278,20 @@ function GarcomPage() {
             disabled={enviando || linhas.length === 0 || !mesaId}
             onClick={async () => {
               setEnviando(true);
-              await criarPedido({
+              const r = await criarPedido({
                 mesa_id: mesaId,
                 garcom_id: garcomId || null,
                 origem: "garcom",
                 gorjeta: 0,
-                pago: false,
                 forma_pagamento: forma,
                 linhas,
               });
               setEnviando(false);
+              const aviso = avisoDoPedido(r);
+              if (aviso) {
+                window.alert(aviso);
+                return;
+              }
               aoFechar();
             }}
             className="btn-base bg-primary text-primary-foreground disabled:opacity-50"
