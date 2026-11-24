@@ -7,8 +7,14 @@ interface SessaoAdmin {
 }
 
 function config() {
+  const segredo = process.env["SESSION_SECRET"];
+  if (!segredo || segredo.length < 32) {
+    throw new Error(
+      "SESSION_SECRET não configurada (precisa de pelo menos 32 caracteres) nas variáveis de ambiente da hospedagem.",
+    );
+  }
   return {
-    password: process.env["SESSION_SECRET"]!,
+    password: segredo,
     name: "boramar-admin",
     maxAge: 60 * 60 * 24 * 7,
     cookie: {

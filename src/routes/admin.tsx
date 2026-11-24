@@ -41,10 +41,18 @@ function AdminPage() {
   const [erro, setErro] = useState(false);
   const [selecionada, setSelecionada] = useState<BarracaAdmin | null>(null);
 
+  const [erroCarga, setErroCarga] = useState("");
+
   async function recarregar() {
-    const r = await listarBarracas();
-    setLiberado(r.liberado);
-    setBarracas(r.barracas);
+    try {
+      const r = await listarBarracas();
+      setErroCarga("");
+      setLiberado(r.liberado);
+      setBarracas(r.barracas);
+    } catch (e) {
+      console.error(e);
+      setErroCarga(e instanceof Error ? e.message : String(e));
+    }
   }
 
   useEffect(() => {
@@ -55,9 +63,16 @@ function AdminPage() {
     return (
       <div className="min-h-screen">
         <AppHeader subtitulo="Administração" />
-        <p className="mx-auto max-w-3xl px-4 pt-8 text-xl font-bold">
-          Carregando…
-        </p>
+        {erroCarga ? (
+          <div className="mx-auto max-w-3xl px-4 pt-8">
+            <p className="text-xl font-bold">Não foi possível abrir a administração.</p>
+            <p className="mt-2 text-muted-foreground">{erroCarga}</p>
+          </div>
+        ) : (
+          <p className="mx-auto max-w-3xl px-4 pt-8 text-xl font-bold">
+            Carregando…
+          </p>
+        )}
       </div>
     );
   }
