@@ -18,7 +18,11 @@ import {
   useSituacaoPedido,
 } from "@/lib/store";
 import { gerarCodigoPix } from "@/lib/pix";
-import { categoriasDe } from "@/lib/types";
+import { categoriasDe, type Produto } from "@/lib/types";
+import { JanelaEscolhas, SelosVeg, useCarrinho } from "@/components/Escolhas";
+import { temEscolhaPossivel } from "@/lib/opcoes";
+
+const ABA_VEG = "🌱 Vegetariano / Vegano";
 
 export const Route = createFileRoute("/$slug/mesa/$numero")({
   head: () => ({
@@ -57,11 +61,16 @@ function ClientePage() {
   const mesa = dados.mesas.find((m) => m.numero === Number(numero));
   const servicoLigado = barraca.servico_percentual > 0;
 
-  const categorias = useMemo(() => categoriasDe(produtos), [produtos]);
+  const temVeg = produtos.some((p) => p.vegetariano || p.vegano);
+  const categorias = useMemo(
+    () => [...categoriasDe(produtos), ...(temVeg ? [ABA_VEG] : [])],
+    [produtos, temVeg],
+  );
   const [etapa, setEtapa] = useState<Etapa>("cardapio");
   const [abaEscolhida, setAba] = useState<string>("");
   const aba = abaEscolhida || categorias[0] || "";
-  const [carrinho, setCarrinho] = useState<Record<string, number>>({});
+  const carrinho = useCarrinho(produtos);
+  const [escolhendo, setEscolhendo] = useState<Produto | null>(null);
   const [caixinha, setCaixinha] = useState(0);
   const [outroValor, setOutroValor] = useState("");
   const [garcomId, setGarcomId] = useState<string>("");
@@ -88,28 +97,15 @@ function ClientePage() {
   useEffect(() => assinarFila(() => forcar((n) => n + 1)), []);
   const aindaNaFila = pendente && pedidosPendentes() > 0;
 
-  const linhas = useMemo(
-    () =>
-      Object.entries(carrinho)
-        .map(([id, quantidade]) => ({
-          produto: produtos.find((p) => p.id === id)!,
-          quantidade,
-        }))
-        .filter((l) => l.produto && l.produto.disponivel && l.quantidade > 0),
-    [carrinho, produtos],
-  );
-  const consumo = linhas.reduce((s, l) => s + l.produto.preco * l.quantidade, 0);
+  const linhas = carrinho.linhas;
+  const consumo = carrinho.total;
   const caixinhaUsada = servicoLigado ? 0 : caixinha;
   const totalGeral = totalConfirmado ?? consumo + caixinhaUsada;
 
-  const mudar = (id: string, delta: number) =>
-    setCarrinho((c) => {
-      const q = Math.max(0, (c[id] ?? 0) + delta);
-      const novo = { ...c };
-      if (q === 0) delete novo[id];
-      else novo[id] = q;
-      return novo;
-    });
+  const comEscolhas = (p: Produto) => p.opcoes.some((g) => g.itens.length > 0);
+  const podePedir = (p: Produto) => p.disponivel && temEscolhaPossivel(p.opcoes);
+  /** item com escolhas abre a janela; sem escolhas entra direto */
+  const pedirMais = (p: Produto) => (comEscolhas(p) ? setEscolhendo(p) : carrinho.adicionar(p));
 
   function recomecar() {
     setEtapa("cardapio");
@@ -138,7 +134,11 @@ function ClientePage() {
       origem: "cliente",
       gorjeta: caixinhaUsada,
       forma_pagamento: forma,
-      linhas,
+      linhas: linhas.map((l) => ({
+        produto: l.produto,
+        quantidade: l.quantidade,
+        escolhas: l.escolhas,
+      })),
     });
     setEnviando(false);
     const problema = avisoDoPedido(r);
@@ -147,7 +147,8 @@ function ClientePage() {
       if (!r.pendente && "resultado" in r && !r.resultado.ok) {
         if (r.resultado.motivo === "garcom") setErroGarcom(true);
         // algo acabou: busca o cardápio atualizado (itens que acabaram saem do carrinho)
-        if (r.resultado.motivo === "indisponivel") dados.recarregar();
+        if (r.resultado.motivo === "indisponivel" || r.resultado.motivo === "escolha")
+          dados.recarregar();
       }
       return;
     }
@@ -157,7 +158,7 @@ function ClientePage() {
       !r.pendente && "resultado" in r && r.resultado.ok ? r.resultado.total : null,
     );
     if (forma === "final") {
-      setCarrinho({});
+      carrinho.limpar();
       atualizarMesa();
       setEtapa("na_conta");
     } else setEtapa(forma === "pix" ? "pix" : "cartao");
@@ -244,42 +245,64 @@ function ClientePage() {
           </div>
 
           <ul className="mt-2 grid gap-3">
+            {aba === ABA_VEG && (
+              <li className="text-base text-muted-foreground">
+                Itens que a barraca marcou como vegetarianos ou veganos. Na dúvida, pergunte ao
+                garçom.
+              </li>
+            )}
             {produtos
-              .filter((p) => p.categoria === aba)
+              .filter((p) => (aba === ABA_VEG ? p.vegetariano || p.vegano : p.categoria === aba))
               .map((p) => (
                 <li
                   key={p.id}
                   className={`card-praia flex items-center gap-3 p-4 ${
-                    p.disponivel ? "" : "opacity-45"
+                    podePedir(p) ? "" : "opacity-45"
                   }`}
                 >
                   <div className="min-w-0 flex-1">
-                    <p className="text-xl font-extrabold">{p.nome}</p>
+                    <p className="text-xl font-extrabold">
+                      {p.nome}
+                      <SelosVeg produto={p} />
+                    </p>
+                    {p.descricao && (
+                      <p className="text-base text-muted-foreground">{p.descricao}</p>
+                    )}
+                    {comEscolhas(p) && (
+                      <p className="text-sm font-bold text-primary">
+                        Escolha{" "}
+                        {p.opcoes
+                          .filter((g) => g.itens.length)
+                          .map((g) => g.nome.toLowerCase())
+                          .join(" e ")}
+                      </p>
+                    )}
                     <p className="text-lg font-bold text-muted-foreground">
+                      {comEscolhas(p) ? "a partir de " : ""}
                       {formatarReal(p.preco)}
-                      {!p.disponivel && (
+                      {!podePedir(p) && (
                         <span className="ml-2 rounded-full bg-destructive px-2 py-0.5 text-sm font-extrabold text-destructive-foreground">
                           acabou
                         </span>
                       )}
                     </p>
                   </div>
-                  {p.disponivel ? (
-                    carrinho[p.id] ? (
+                  {podePedir(p) ? (
+                    carrinho.quantidadeDo(p.id) ? (
                       <div className="flex items-center gap-2">
                         <button
                           aria-label={`Remover um ${p.nome}`}
-                          onClick={() => mudar(p.id, -1)}
+                          onClick={() => carrinho.tirarDoProduto(p.id)}
                           className="btn-base h-12 w-12 border-2 border-primary bg-card text-2xl"
                         >
                           −
                         </button>
                         <span className="w-6 text-center text-xl font-extrabold">
-                          {carrinho[p.id]}
+                          {carrinho.quantidadeDo(p.id)}
                         </span>
                         <button
                           aria-label={`Adicionar um ${p.nome}`}
-                          onClick={() => mudar(p.id, 1)}
+                          onClick={() => pedirMais(p)}
                           className="btn-base h-12 w-12 bg-accent text-2xl text-accent-foreground"
                         >
                           +
@@ -287,10 +310,10 @@ function ClientePage() {
                       </div>
                     ) : (
                       <button
-                        onClick={() => mudar(p.id, 1)}
+                        onClick={() => pedirMais(p)}
                         className="btn-base bg-accent text-accent-foreground"
                       >
-                        Adicionar
+                        {comEscolhas(p) ? "Escolher" : "Adicionar"}
                       </button>
                     )
                   ) : null}
@@ -302,7 +325,7 @@ function ClientePage() {
             <BarraFixa>
               <div className="flex-1">
                 <p className="text-sm font-bold text-muted-foreground">
-                  {linhas.reduce((s, l) => s + l.quantidade, 0)} itens
+                  {carrinho.quantidadeTotal} itens
                 </p>
                 <p className="text-2xl font-extrabold">{formatarReal(consumo)}</p>
               </div>
@@ -343,6 +366,17 @@ function ClientePage() {
         </main>
       )}
 
+      {escolhendo && (
+        <JanelaEscolhas
+          produto={escolhendo}
+          aoFechar={() => setEscolhendo(null)}
+          aoConfirmar={(e) => {
+            carrinho.adicionar(escolhendo, e);
+            setEscolhendo(null);
+          }}
+        />
+      )}
+
       {etapa === "checkout" && (
         <main className="mx-auto max-w-3xl px-4 pt-5">
           <h1 className="text-3xl font-extrabold">Seu pedido</h1>
@@ -350,13 +384,21 @@ function ClientePage() {
 
           <ul className="card-praia mt-4 divide-y-2 divide-border p-4">
             {linhas.map((l) => (
-              <li key={l.produto.id} className="flex justify-between py-2 text-lg">
-                <span className="font-semibold">
-                  {l.quantidade}× {l.produto.nome}
+              <li key={l.chave} className="flex items-center justify-between gap-2 py-2 text-lg">
+                <span className="min-w-0 flex-1 font-semibold">
+                  {l.quantidade}× {l.nome}
                 </span>
-                <span className="font-extrabold">
-                  {formatarReal(l.produto.preco * l.quantidade)}
-                </span>
+                <span className="font-extrabold">{formatarReal(l.preco * l.quantidade)}</span>
+                <button
+                  aria-label={`Tirar um ${l.nome}`}
+                  onClick={() => {
+                    carrinho.tirar(l.chave);
+                    if (carrinho.quantidadeTotal <= 1) setEtapa("cardapio");
+                  }}
+                  className="btn-base h-10 w-10 border-2 border-border bg-card px-0 text-xl"
+                >
+                  −
+                </button>
               </li>
             ))}
           </ul>
@@ -483,7 +525,7 @@ function ClientePage() {
             onClick={() => {
               if (pedidoId && !pendente) void avisarQuePagouPedido(pedidoId);
               setEtapa("fim");
-              setCarrinho({});
+              carrinho.limpar();
               atualizarMesa();
             }}
             className="btn-base mt-5 w-full bg-success py-5 text-xl text-success-foreground"
@@ -514,7 +556,7 @@ function ClientePage() {
           rodape={aindaNaFila ? <Calma /> : null}
           botao="Pedir mais alguma coisa"
           aoTocar={() => {
-            setCarrinho({});
+            carrinho.limpar();
             recomecar();
           }}
         />

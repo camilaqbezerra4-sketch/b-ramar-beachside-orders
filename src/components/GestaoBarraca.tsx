@@ -12,6 +12,7 @@ import {
 import { categoriasDe, type Produto } from "@/lib/types";
 import { CampoChavePix } from "@/components/CampoChavePix";
 import { analisarChavePix } from "@/lib/chave-pix";
+import { EditorOpcoes } from "@/components/EditorOpcoes";
 
 export function AbaCardapio({ produtos }: { produtos: Produto[] }) {
   const categorias = categoriasDe(produtos);
@@ -127,11 +128,48 @@ export function AbaCardapio({ produtos }: { produtos: Produto[] }) {
                       />
                     </label>
                   </div>
+                  <CampoSalvaAoSair
+                    valor={p.descricao}
+                    aoSalvar={(v) => {
+                      const descricao = v.trim().slice(0, 160);
+                      if (descricao !== p.descricao) void atualizarProduto(p.id, { descricao });
+                    }}
+                    rotulo={`Descrição de ${p.nome}`}
+                    placeholder="Descrição (opcional): ingredientes, tamanho, serve quantos…"
+                    className="w-full rounded-xl border-2 border-border bg-background px-3 py-2 text-base font-semibold"
+                  />
                   <div className="flex flex-wrap gap-2">
                     <button
                       onClick={() =>
-                        atualizarProduto(p.id, { disponivel: !p.disponivel })
+                        void atualizarProduto(
+                          p.id,
+                          p.vegetariano
+                            ? { vegetariano: false, vegano: false }
+                            : { vegetariano: true },
+                        )
                       }
+                      aria-pressed={p.vegetariano}
+                      className={`btn-base border-2 ${p.vegetariano ? "border-success bg-success text-success-foreground" : "border-border bg-card"}`}
+                    >
+                      🌱 Vegetariano
+                    </button>
+                    <button
+                      onClick={() =>
+                        void atualizarProduto(
+                          p.id,
+                          p.vegano ? { vegano: false } : { vegano: true, vegetariano: true },
+                        )
+                      }
+                      aria-pressed={p.vegano}
+                      className={`btn-base border-2 ${p.vegano ? "border-success bg-success text-success-foreground" : "border-border bg-card"}`}
+                    >
+                      🌱 Vegano
+                    </button>
+                  </div>
+                  <EditorOpcoes produto={p} />
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={() => atualizarProduto(p.id, { disponivel: !p.disponivel })}
                       aria-pressed={p.disponivel}
                       className={`btn-base min-w-[7.5rem] ${
                         p.disponivel
@@ -196,11 +234,7 @@ export function AbaEquipe() {
           aria-label="Nome do garçom"
           className="w-full rounded-xl border-2 border-border bg-background px-3 py-3 text-lg font-bold"
         />
-        <CampoChavePix
-          valor={pix}
-          aoMudar={setPix}
-          rotulo="Chave Pix do garçom"
-        />
+        <CampoChavePix valor={pix} aoMudar={setPix} rotulo="Chave Pix do garçom" />
         <button
           disabled={!podeSalvar}
           onClick={() => {
@@ -215,20 +249,16 @@ export function AbaEquipe() {
         </button>
       </div>
 
-
       <div className="mt-4 grid gap-3">
         {garcons.map((g) => (
           <div key={g.id} className="card-praia flex items-center gap-3 p-4">
             <div className="min-w-0 flex-1">
               <p className="text-xl font-extrabold">{g.nome}</p>
-              <p className="text-base text-muted-foreground">
-                {g.chave_pix || "sem chave Pix"}
-              </p>
+              <p className="text-base text-muted-foreground">{g.chave_pix || "sem chave Pix"}</p>
             </div>
             <button
               onClick={() => {
-                if (window.confirm(`Remover ${g.nome} da equipe?`))
-                  void removerGarcom(g.id);
+                if (window.confirm(`Remover ${g.nome} da equipe?`)) void removerGarcom(g.id);
               }}
               className="btn-base border-2 border-border bg-card text-destructive"
             >
@@ -237,9 +267,7 @@ export function AbaEquipe() {
           </div>
         ))}
         {garcons.length === 0 && (
-          <p className="text-lg text-muted-foreground">
-            Nenhum garçom cadastrado.
-          </p>
+          <p className="text-lg text-muted-foreground">Nenhum garçom cadastrado.</p>
         )}
       </div>
     </>
@@ -257,7 +285,9 @@ function CampoSalvaAoSair({
   rotulo,
   className,
   numerico = false,
+  placeholder,
 }: {
+  placeholder?: string;
   valor: string;
   aoSalvar: (v: string) => void;
   rotulo: string;
@@ -283,6 +313,7 @@ function CampoSalvaAoSair({
         if (e.key === "Enter") (e.target as HTMLInputElement).blur();
       }}
       aria-label={rotulo}
+      placeholder={placeholder}
       className={className}
     />
   );

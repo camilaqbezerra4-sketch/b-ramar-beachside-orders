@@ -28,6 +28,7 @@ import type {
   Servico,
   StatusPedido,
 } from "./types";
+import type { Escolhas, GrupoOpcao } from "./opcoes";
 
 /**
  * Camada de dados do BóraMar no navegador.
@@ -249,7 +250,20 @@ export const encerrarPedido = (pedidoId: string, status: "cancelado" | "expirado
   agir({ tipo: "encerrar", pedidoId, status });
 
 export const atualizarProduto = (produtoId: string, patch: Partial<Produto>) => {
-  const limpo: { nome?: string; preco?: number; disponivel?: boolean; categoria?: string } = {};
+  const limpo: {
+    nome?: string;
+    preco?: number;
+    disponivel?: boolean;
+    categoria?: string;
+    descricao?: string;
+    vegetariano?: boolean;
+    vegano?: boolean;
+    opcoes?: GrupoOpcao[];
+  } = {};
+  if (patch.descricao !== undefined) limpo.descricao = patch.descricao;
+  if (patch.vegetariano !== undefined) limpo.vegetariano = patch.vegetariano;
+  if (patch.vegano !== undefined) limpo.vegano = patch.vegano;
+  if (patch.opcoes !== undefined) limpo.opcoes = patch.opcoes;
   if (patch.nome !== undefined) limpo.nome = patch.nome;
   if (patch.preco !== undefined) limpo.preco = patch.preco;
   if (patch.disponivel !== undefined) limpo.disponivel = patch.disponivel;
@@ -577,7 +591,7 @@ export async function criarPedido(input: {
   gorjeta: number;
   /** "final" = pôr na conta da mesa e pagar no fim */
   forma_pagamento?: "pix" | "cartao" | "final";
-  linhas: Array<{ produto: Produto; quantidade: number }>;
+  linhas: Array<{ produto: Produto; quantidade: number; escolhas?: Escolhas }>;
 }): Promise<RespostaPedido> {
   const slug = input.slug ?? slugAtivo ?? "";
   const id = novoId();
@@ -593,6 +607,7 @@ export async function criarPedido(input: {
       id: novoId(),
       produto_id: l.produto.id,
       quantidade: l.quantidade,
+      ...(l.escolhas && Object.keys(l.escolhas).length ? { escolhas: l.escolhas } : {}),
     })),
   };
 
@@ -619,6 +634,8 @@ export function avisoDoPedido(r: RespostaPedido): string | null {
   const res = r.resultado;
   if (res.ok) return null;
   switch (res.motivo) {
+    case "escolha":
+      return res.erro;
     case "indisponivel":
       return "Estes itens acabaram ou saíram do cardápio: " + res.itens.join(", ") + ".";
     case "garcom":

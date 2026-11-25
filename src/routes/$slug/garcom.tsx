@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { AppHeader } from "@/components/AppHeader";
 import { TelaPin } from "@/components/PortaoPin";
+import { ItensParaLancar, useCarrinho } from "@/components/Escolhas";
 import {
   atualizarStatus,
   avisoDoPedido,
@@ -10,7 +11,6 @@ import {
   formatarReal,
   useDados,
 } from "@/lib/store";
-import { categoriasDe } from "@/lib/types";
 
 export const Route = createFileRoute("/$slug/garcom")({
   component: GarcomPage,
@@ -142,26 +142,11 @@ function GarcomPage() {
     const [mesaId, setMesaId] = useState(mesas[0]?.id ?? "");
     const [garcomId, setGarcomId] = useState(garcons[0]?.id ?? "");
     const [forma, setForma] = useState<"pix" | "cartao" | "final">("final");
-    const [carrinho, setCarrinho] = useState<Record<string, number>>({});
+    const carrinho = useCarrinho(produtos);
     const [enviando, setEnviando] = useState(false);
 
-    const categorias = useMemo(() => categoriasDe(produtos), []);
-    const linhas = Object.entries(carrinho)
-      .map(([id, quantidade]) => ({
-        produto: produtos.find((p) => p.id === id)!,
-        quantidade,
-      }))
-      .filter((l) => l.produto && l.quantidade > 0);
-    const total = linhas.reduce((s, l) => s + l.produto.preco * l.quantidade, 0);
-
-    const mudar = (id: string, delta: number) =>
-      setCarrinho((c) => {
-        const q = Math.max(0, (c[id] ?? 0) + delta);
-        const novo = { ...c };
-        if (q === 0) delete novo[id];
-        else novo[id] = q;
-        return novo;
-      });
+    const linhas = carrinho.linhas;
+    const total = carrinho.total;
 
     const campo =
       "w-full rounded-xl border-2 border-border bg-background px-3 py-3 text-lg font-bold";
@@ -214,40 +199,7 @@ function GarcomPage() {
           </div>
         </div>
 
-        {categorias.map((c) => (
-          <section key={c} className="mt-5">
-            <h2 className="text-xl font-extrabold">{c}</h2>
-            <div className="mt-2 grid gap-2">
-              {produtos
-                .filter((p) => p.categoria === c && p.disponivel)
-                .map((p) => (
-                  <div key={p.id} className="card-praia flex items-center gap-2 p-3">
-                    <div className="min-w-0 flex-1">
-                      <p className="text-lg font-extrabold">{p.nome}</p>
-                      <p className="text-base text-muted-foreground">{formatarReal(p.preco)}</p>
-                    </div>
-                    <button
-                      onClick={() => mudar(p.id, -1)}
-                      aria-label={`Tirar ${p.nome}`}
-                      className="btn-base border-2 border-border bg-card"
-                    >
-                      −
-                    </button>
-                    <span className="w-8 text-center text-lg font-extrabold">
-                      {carrinho[p.id] ?? 0}
-                    </span>
-                    <button
-                      onClick={() => mudar(p.id, 1)}
-                      aria-label={`Adicionar ${p.nome}`}
-                      className="btn-base bg-accent text-accent-foreground"
-                    >
-                      +
-                    </button>
-                  </div>
-                ))}
-            </div>
-          </section>
-        ))}
+        <ItensParaLancar produtos={produtos} carrinho={carrinho} />
 
         <div className="sticky bottom-0 mt-6 grid gap-2 bg-background py-3">
           <p className="text-2xl font-extrabold">Total {formatarReal(total)}</p>
@@ -261,7 +213,11 @@ function GarcomPage() {
                 origem: "garcom",
                 gorjeta: 0,
                 forma_pagamento: forma,
-                linhas,
+                linhas: carrinho.linhas.map((l) => ({
+                  produto: l.produto,
+                  quantidade: l.quantidade,
+                  escolhas: l.escolhas,
+                })),
               });
               setEnviando(false);
               const aviso = avisoDoPedido(r);

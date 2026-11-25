@@ -1,3 +1,4 @@
+import type { GrupoOpcao } from "./opcoes";
 // Tipos espelhando o schema previsto no Supabase.
 export type Categoria = string;
 export type StatusPedido =
@@ -42,6 +43,12 @@ export interface Produto {
   preco: number;
   disponivel: boolean;
   ordem: number;
+  /** texto curto mostrado ao cliente (ingredientes, tamanho etc.) */
+  descricao: string;
+  vegetariano: boolean;
+  vegano: boolean;
+  /** grupos de escolha (ex.: bebida e fruta da caipirinha) */
+  opcoes: GrupoOpcao[];
 }
 
 export interface ItemPedido {

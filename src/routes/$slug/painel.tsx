@@ -5,6 +5,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { SuporteWhatsApp } from "@/components/SuporteWhatsApp";
 import { AbaCardapio, AbaEquipe } from "@/components/GestaoBarraca";
 import { TelaPin } from "@/components/PortaoPin";
+import { ItensParaLancar, useCarrinho } from "@/components/Escolhas";
 import { gruposDaMesa, anterioresDeHoje, abreGrupo, resumoDaMesa } from "@/lib/mesas";
 import { gerarCodigoPix } from "@/lib/pix";
 import {
@@ -1319,16 +1320,11 @@ function LancarPedido({ aoFechar }: { aoFechar: () => void }) {
   const [mesaId, setMesaId] = useState(mesas[0]?.id ?? "");
   const [garcomId, setGarcomId] = useState(garcons[0]?.id ?? "");
   const [forma, setForma] = useState<"pix" | "cartao" | "final">("final");
-  const [qtds, setQtds] = useState<Record<string, number>>({});
+  const carrinho = useCarrinho(produtos);
   const [enviando, setEnviando] = useState(false);
 
-  const linhas = Object.entries(qtds)
-    .map(([id, quantidade]) => ({
-      produto: produtos.find((p) => p.id === id)!,
-      quantidade,
-    }))
-    .filter((l) => l.produto && l.quantidade > 0);
-  const total = linhas.reduce((s, l) => s + l.produto.preco * l.quantidade, 0);
+  const linhas = carrinho.linhas;
+  const total = carrinho.total;
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-background">
@@ -1397,38 +1393,7 @@ function LancarPedido({ aoFechar }: { aoFechar: () => void }) {
           ))}
         </div>
 
-        <div className="mt-5 grid gap-3">
-          {produtos
-            .filter((p) => p.disponivel)
-            .map((p) => (
-              <div key={p.id} className="card-praia flex items-center gap-3 p-4">
-                <div className="min-w-0 flex-1">
-                  <p className="text-lg font-extrabold">{p.nome}</p>
-                  <p className="text-base text-muted-foreground">{formatarReal(p.preco)}</p>
-                </div>
-                <button
-                  aria-label={`Remover um ${p.nome}`}
-                  onClick={() =>
-                    setQtds((q) => ({
-                      ...q,
-                      [p.id]: Math.max(0, (q[p.id] ?? 0) - 1),
-                    }))
-                  }
-                  className="btn-base h-12 w-12 border-2 border-primary bg-card text-2xl"
-                >
-                  −
-                </button>
-                <span className="w-6 text-center text-xl font-extrabold">{qtds[p.id] ?? 0}</span>
-                <button
-                  aria-label={`Adicionar um ${p.nome}`}
-                  onClick={() => setQtds((q) => ({ ...q, [p.id]: (q[p.id] ?? 0) + 1 }))}
-                  className="btn-base h-12 w-12 bg-accent text-2xl text-accent-foreground"
-                >
-                  +
-                </button>
-              </div>
-            ))}
-        </div>
+        <ItensParaLancar produtos={produtos} carrinho={carrinho} />
       </div>
 
       <div className="border-t-2 border-border bg-card px-4 py-4">
@@ -1444,7 +1409,7 @@ function LancarPedido({ aoFechar }: { aoFechar: () => void }) {
                 origem: "garcom",
                 gorjeta: 0,
                 forma_pagamento: forma,
-                linhas,
+                linhas: carrinho.linhas.map((l) => ({ produto: l.produto, quantidade: l.quantidade, escolhas: l.escolhas })),
               });
               setEnviando(false);
               const aviso = avisoDoPedido(r);

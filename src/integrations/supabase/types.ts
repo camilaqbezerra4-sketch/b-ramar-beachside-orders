@@ -303,34 +303,46 @@ export type Database = {
           barraca_id: string
           categoria: string
           criado_em: string
+          descricao: string
           disponivel: boolean
           id: string
           nome: string
+          opcoes: Json
           ordem: number
           preco: number
           updated_at: string
+          vegano: boolean
+          vegetariano: boolean
         }
         Insert: {
           barraca_id: string
           categoria?: string
           criado_em?: string
+          descricao?: string
           disponivel?: boolean
           id?: string
           nome: string
+          opcoes?: Json
           ordem?: number
           preco?: number
           updated_at?: string
+          vegano?: boolean
+          vegetariano?: boolean
         }
         Update: {
           barraca_id?: string
           categoria?: string
           criado_em?: string
+          descricao?: string
           disponivel?: boolean
           id?: string
           nome?: string
+          opcoes?: Json
           ordem?: number
           preco?: number
           updated_at?: string
+          vegano?: boolean
+          vegetariano?: boolean
         }
         Relationships: [
           {

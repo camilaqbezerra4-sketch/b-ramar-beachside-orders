@@ -8,6 +8,8 @@ import { createServerFn } from "@tanstack/react-start";
 import { useSession } from "@tanstack/react-start/server";
 import { createHash, timingSafeEqual } from "node:crypto";
 import { gerarCodigoPix } from "./pix";
+import { aplicarEscolhas, sanitizarOpcoes, type Escolhas } from "./opcoes";
+import type { Json } from "@/integrations/supabase/types";
 
 const HORA = 60 * 60 * 1000;
 /** Pedidos carregados para a operação do dia (Caixa, Cozinha, Mesas, Garçom). */
@@ -190,7 +192,9 @@ async function produtosDa(barracaId: string) {
   const sb = await db();
   const { data, error } = await sb
     .from("produtos")
-    .select("id, barraca_id, nome, categoria, preco, disponivel, ordem")
+    .select(
+      "id, barraca_id, nome, categoria, preco, disponivel, ordem, descricao, vegetariano, vegano, opcoes",
+    )
     .eq("barraca_id", barracaId)
     .order("categoria")
     .order("ordem")
@@ -204,6 +208,10 @@ async function produtosDa(barracaId: string) {
     preco: Number(p.preco),
     disponivel: p.disponivel,
     ordem: p.ordem ?? 0,
+    descricao: p.descricao ?? "",
+    vegetariano: !!p.vegetariano,
+    vegano: !!p.vegano,
+    opcoes: sanitizarOpcoes(p.opcoes),
   }));
 }
 
@@ -375,7 +383,7 @@ export interface EntradaPedido {
   gorjeta: number;
   /** "final" = pôr na conta da mesa e pagar no fim */
   forma_pagamento: "pix" | "cartao" | "final";
-  itens: Array<{ id: string; produto_id: string; quantidade: number }>;
+  itens: Array<{ id: string; produto_id: string; quantidade: number; escolhas?: Escolhas }>;
 }
 
 /** O que acontece com o pedido depois de enviado. */
@@ -385,6 +393,7 @@ export type ResultadoPedido =
   | { ok: true; id: string; total: number; situacao: SituacaoEnvio }
   | { ok: false; motivo: "indisponivel"; itens: string[] }
   | { ok: false; motivo: "limite"; emAberto: number }
+  | { ok: false; motivo: "escolha"; erro: string }
   | { ok: false; motivo: "garcom" | "mesa" | "barraca" | "invalido" | "final_desligado" };
 
 /**
@@ -464,7 +473,7 @@ export const enviarPedido = createServerFn({ method: "POST" })
     const ids = [...new Set(itens.map((i) => i.produto_id))];
     const { data: produtos, error: erroProdutos } = await sb
       .from("produtos")
-      .select("id, nome, preco, disponivel")
+      .select("id, nome, preco, disponivel, opcoes")
       .eq("barraca_id", barraca.id)
       .in("id", ids);
     if (erroProdutos) throw erroProdutos;
@@ -475,17 +484,24 @@ export const enviarPedido = createServerFn({ method: "POST" })
       .map((p) => p?.nome ?? "item removido do cardápio");
     if (faltando.length) return { ok: false, motivo: "indisponivel", itens: faltando };
 
-    const linhas = itens.map((i) => {
+    // escolhas (bebida, frutas…): conferidas aqui, com o preço do banco
+    const linhas = [];
+    for (const i of itens) {
       const p = porId.get(i.produto_id)!;
-      return {
+      const r = aplicarEscolhas(
+        { nome: p.nome, preco: Number(p.preco), opcoes: sanitizarOpcoes(p.opcoes) },
+        i.escolhas,
+      );
+      if (!r.ok) return { ok: false, motivo: "escolha", erro: `${p.nome}: ${r.erro}` };
+      linhas.push({
         id: i.id,
         pedido_id: data.id,
         produto_id: p.id,
-        nome_produto: p.nome,
+        nome_produto: r.nome.slice(0, 200),
         quantidade: Number(i.quantidade),
-        preco: Number(p.preco),
-      };
-    });
+        preco: r.precoUnitario,
+      });
+    }
     const consumo = linhas.reduce((s, l) => s + l.preco * l.quantidade, 0);
     const total = Math.round((consumo + gorjeta) * 100) / 100;
 
@@ -791,7 +807,16 @@ export type AcaoPainel =
   | {
       tipo: "atualizarProduto";
       produtoId: string;
-      patch: { nome?: string; preco?: number; disponivel?: boolean; categoria?: string };
+      patch: {
+        nome?: string;
+        preco?: number;
+        disponivel?: boolean;
+        categoria?: string;
+        descricao?: string;
+        vegetariano?: boolean;
+        vegano?: boolean;
+        opcoes?: unknown;
+      };
     }
   | { tipo: "criarProduto"; nome: string; categoria: string; preco: number }
   | { tipo: "removerProduto"; produtoId: string }
@@ -870,7 +895,16 @@ export const acaoPainel = createServerFn({ method: "POST" })
           categoria?: string;
           disponivel?: boolean;
           preco?: number;
+          descricao?: string;
+          vegetariano?: boolean;
+          vegano?: boolean;
+          opcoes?: Json;
         } = {};
+        if (a.patch.descricao !== undefined) patch.descricao = texto(a.patch.descricao, 160);
+        if (a.patch.vegetariano !== undefined) patch.vegetariano = !!a.patch.vegetariano;
+        if (a.patch.vegano !== undefined) patch.vegano = !!a.patch.vegano;
+        if (a.patch.opcoes !== undefined)
+          patch.opcoes = sanitizarOpcoes(a.patch.opcoes) as unknown as Json;
         if (a.patch.nome !== undefined) patch.nome = texto(a.patch.nome, 80);
         if (a.patch.categoria !== undefined) patch.categoria = texto(a.patch.categoria, 40);
         if (a.patch.disponivel !== undefined) patch.disponivel = !!a.patch.disponivel;
