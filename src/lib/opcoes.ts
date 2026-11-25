@@ -216,3 +216,27 @@ export function temEscolhaPossivel(opcoes: GrupoOpcao[]): boolean {
     (g) => g.itens.length === 0 || g.itens.filter((i) => i.disponivel).length >= g.min,
   );
 }
+
+/** Observação do cliente num item (ex.: "pouco açúcar"). Vai junto no nome da linha do pedido. */
+export const SEPARADOR_OBS = " · Obs: ";
+export const MAX_OBS = 80;
+
+export function limparObs(bruto: unknown): string {
+  return String(bruto ?? "")
+    .replace(/\p{Cc}/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, MAX_OBS);
+}
+
+/** Separa "Caipirinha (Vodka) · Obs: pouco açúcar" em nome e observação. */
+export function separarObs(nome: string): { nome: string; obs: string } {
+  const i = nome.indexOf(SEPARADOR_OBS);
+  return i < 0
+    ? { nome, obs: "" }
+    : { nome: nome.slice(0, i), obs: nome.slice(i + SEPARADOR_OBS.length) };
+}
+
+/** Texto sem acento e em minúsculas, para a busca no cardápio. */
+export const normalizarBusca = (t: string) =>
+  t.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();

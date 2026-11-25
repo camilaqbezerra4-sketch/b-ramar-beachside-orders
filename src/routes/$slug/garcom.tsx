@@ -217,6 +217,7 @@ function GarcomPage() {
                   produto: l.produto,
                   quantidade: l.quantidade,
                   escolhas: l.escolhas,
+                  obs: l.obs,
                 })),
               });
               setEnviando(false);

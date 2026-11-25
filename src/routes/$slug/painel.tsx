@@ -5,7 +5,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { SuporteWhatsApp } from "@/components/SuporteWhatsApp";
 import { AbaCardapio, AbaEquipe } from "@/components/GestaoBarraca";
 import { TelaPin } from "@/components/PortaoPin";
-import { ItensParaLancar, useCarrinho } from "@/components/Escolhas";
+import { ItensParaLancar, NomeComObs, useCarrinho } from "@/components/Escolhas";
 import { gruposDaMesa, anterioresDeHoje, abreGrupo, resumoDaMesa } from "@/lib/mesas";
 import { gerarCodigoPix } from "@/lib/pix";
 import {
@@ -687,7 +687,7 @@ function CardRodada({
       <ul className="mt-3 grid gap-1 text-lg">
         {itens.map((i) => (
           <li key={i.nome} className="font-semibold">
-            {i.qtd}× {i.nome}
+            {i.qtd}× <NomeComObs nome={i.nome} />
           </li>
         ))}
       </ul>
@@ -1409,7 +1409,7 @@ function LancarPedido({ aoFechar }: { aoFechar: () => void }) {
                 origem: "garcom",
                 gorjeta: 0,
                 forma_pagamento: forma,
-                linhas: carrinho.linhas.map((l) => ({ produto: l.produto, quantidade: l.quantidade, escolhas: l.escolhas })),
+                linhas: carrinho.linhas.map((l) => ({ produto: l.produto, quantidade: l.quantidade, escolhas: l.escolhas, obs: l.obs })),
               });
               setEnviando(false);
               const aviso = avisoDoPedido(r);

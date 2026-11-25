@@ -8,7 +8,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { useSession } from "@tanstack/react-start/server";
 import { createHash, timingSafeEqual } from "node:crypto";
 import { gerarCodigoPix } from "./pix";
-import { aplicarEscolhas, sanitizarOpcoes, type Escolhas } from "./opcoes";
+import { aplicarEscolhas, limparObs, sanitizarOpcoes, SEPARADOR_OBS, type Escolhas } from "./opcoes";
 import type { Json } from "@/integrations/supabase/types";
 
 const HORA = 60 * 60 * 1000;
@@ -383,7 +383,7 @@ export interface EntradaPedido {
   gorjeta: number;
   /** "final" = pôr na conta da mesa e pagar no fim */
   forma_pagamento: "pix" | "cartao" | "final";
-  itens: Array<{ id: string; produto_id: string; quantidade: number; escolhas?: Escolhas }>;
+  itens: Array<{ id: string; produto_id: string; quantidade: number; escolhas?: Escolhas; obs?: string }>;
 }
 
 /** O que acontece com o pedido depois de enviado. */
@@ -493,11 +493,12 @@ export const enviarPedido = createServerFn({ method: "POST" })
         i.escolhas,
       );
       if (!r.ok) return { ok: false, motivo: "escolha", erro: `${p.nome}: ${r.erro}` };
+      const obs = limparObs(i.obs);
       linhas.push({
         id: i.id,
         pedido_id: data.id,
         produto_id: p.id,
-        nome_produto: r.nome.slice(0, 200),
+        nome_produto: (obs ? `${r.nome.slice(0, 200 - SEPARADOR_OBS.length - obs.length)}${SEPARADOR_OBS}${obs}` : r.nome).slice(0, 200),
         quantidade: Number(i.quantidade),
         preco: r.precoUnitario,
       });

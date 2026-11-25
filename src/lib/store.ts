@@ -591,7 +591,7 @@ export async function criarPedido(input: {
   gorjeta: number;
   /** "final" = pôr na conta da mesa e pagar no fim */
   forma_pagamento?: "pix" | "cartao" | "final";
-  linhas: Array<{ produto: Produto; quantidade: number; escolhas?: Escolhas }>;
+  linhas: Array<{ produto: Produto; quantidade: number; escolhas?: Escolhas; obs?: string }>;
 }): Promise<RespostaPedido> {
   const slug = input.slug ?? slugAtivo ?? "";
   const id = novoId();
@@ -608,6 +608,7 @@ export async function criarPedido(input: {
       produto_id: l.produto.id,
       quantidade: l.quantidade,
       ...(l.escolhas && Object.keys(l.escolhas).length ? { escolhas: l.escolhas } : {}),
+      ...(l.obs ? { obs: l.obs } : {}),
     })),
   };
 

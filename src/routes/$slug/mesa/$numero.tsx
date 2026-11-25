@@ -19,8 +19,16 @@ import {
 } from "@/lib/store";
 import { gerarCodigoPix } from "@/lib/pix";
 import { categoriasDe, type Produto } from "@/lib/types";
-import { JanelaEscolhas, SelosVeg, useCarrinho } from "@/components/Escolhas";
-import { temEscolhaPossivel } from "@/lib/opcoes";
+import {
+  BuscaCardapio,
+  CampoObs,
+  combinaBusca,
+  JanelaEscolhas,
+  NomeComObs,
+  SelosVeg,
+  useCarrinho,
+} from "@/components/Escolhas";
+import { normalizarBusca, temEscolhaPossivel } from "@/lib/opcoes";
 
 const ABA_VEG = "🌱 Vegetariano / Vegano";
 
@@ -71,6 +79,8 @@ function ClientePage() {
   const aba = abaEscolhida || categorias[0] || "";
   const carrinho = useCarrinho(produtos);
   const [escolhendo, setEscolhendo] = useState<Produto | null>(null);
+  const [busca, setBusca] = useState("");
+  const termo = normalizarBusca(busca);
   const [caixinha, setCaixinha] = useState(0);
   const [outroValor, setOutroValor] = useState("");
   const [garcomId, setGarcomId] = useState<string>("");
@@ -138,6 +148,7 @@ function ClientePage() {
         produto: l.produto,
         quantidade: l.quantidade,
         escolhas: l.escolhas,
+        obs: l.obs,
       })),
     });
     setEnviando(false);
@@ -228,31 +239,46 @@ function ClientePage() {
           <h1 className="text-3xl font-extrabold">Cardápio</h1>
           <p className="mt-1 text-base text-muted-foreground">{barraca.nome}</p>
 
-          <div className="sticky top-[60px] z-30 -mx-4 mt-4 flex gap-2 overflow-x-auto bg-background px-4 py-3">
-            {categorias.map((c) => (
-              <button
-                key={c}
-                onClick={() => setAba(c)}
-                className={`btn-base shrink-0 border-2 ${
-                  aba === c
-                    ? "border-primary bg-primary text-primary-foreground"
-                    : "border-border bg-card text-foreground"
-                }`}
-              >
-                {c}
-              </button>
-            ))}
-          </div>
+          <BuscaCardapio valor={busca} aoMudar={setBusca} />
+
+          {!termo && (
+            <div className="sticky top-[60px] z-30 -mx-4 mt-2 flex gap-2 overflow-x-auto bg-background px-4 py-3">
+              {categorias.map((c) => (
+                <button
+                  key={c}
+                  onClick={() => setAba(c)}
+                  className={`btn-base shrink-0 border-2 ${
+                    aba === c
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border bg-card text-foreground"
+                  }`}
+                >
+                  {c}
+                </button>
+              ))}
+            </div>
+          )}
 
           <ul className="mt-2 grid gap-3">
-            {aba === ABA_VEG && (
+            {termo && !produtos.some((p) => combinaBusca(p, termo)) && (
+              <li className="text-lg font-bold text-muted-foreground">
+                Nada com “{busca.trim()}” no cardápio. Tenta outra palavra?
+              </li>
+            )}
+            {!termo && aba === ABA_VEG && (
               <li className="text-base text-muted-foreground">
                 Itens que a barraca marcou como vegetarianos ou veganos. Na dúvida, pergunte ao
                 garçom.
               </li>
             )}
             {produtos
-              .filter((p) => (aba === ABA_VEG ? p.vegetariano || p.vegano : p.categoria === aba))
+              .filter((p) =>
+                termo
+                  ? combinaBusca(p, termo)
+                  : aba === ABA_VEG
+                    ? p.vegetariano || p.vegano
+                    : p.categoria === aba,
+              )
               .map((p) => (
                 <li
                   key={p.id}
@@ -370,8 +396,8 @@ function ClientePage() {
         <JanelaEscolhas
           produto={escolhendo}
           aoFechar={() => setEscolhendo(null)}
-          aoConfirmar={(e) => {
-            carrinho.adicionar(escolhendo, e);
+          aoConfirmar={(e, obs) => {
+            carrinho.adicionar(escolhendo, e, obs);
             setEscolhendo(null);
           }}
         />
@@ -387,6 +413,7 @@ function ClientePage() {
               <li key={l.chave} className="flex items-center justify-between gap-2 py-2 text-lg">
                 <span className="min-w-0 flex-1 font-semibold">
                   {l.quantidade}× {l.nome}
+                  <CampoObs obs={l.obs} aoMudar={(o) => carrinho.definirObs(l.chave, o)} />
                 </span>
                 <span className="font-extrabold">{formatarReal(l.preco * l.quantidade)}</span>
                 <button
@@ -609,7 +636,7 @@ function ClientePage() {
               <ul className="card-praia mt-4 grid gap-1 p-4 text-lg">
                 {mesaInfo.itensEmAberto.map((i) => (
                   <li key={i.nome} className="font-semibold">
-                    {i.quantidade}× {i.nome}
+                    {i.quantidade}× <NomeComObs nome={i.nome} />
                   </li>
                 ))}
                 <li className="mt-2 flex justify-between border-t-2 border-border pt-2 text-2xl font-extrabold">
