@@ -366,7 +366,9 @@ export function BuscaCardapio({ valor, aoMudar }: { valor: string; aoMudar: (v: 
   return (
     <div className="relative mt-4">
       <input
-        type="search"
+        type="text"
+        inputMode="search"
+        enterKeyHint="search"
         value={valor}
         onChange={(e) => aoMudar(e.target.value)}
         placeholder="🔍 Buscar no cardápio"

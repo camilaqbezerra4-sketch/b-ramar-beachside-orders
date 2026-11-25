@@ -541,7 +541,7 @@ function PainelPage() {
           <>
             <h1 className="text-3xl font-extrabold">Cozinha</h1>
             <p className="mt-1 text-base text-muted-foreground">
-              Só aparece aqui o que já está pago.
+              Só aparece aqui o que pode ser preparado: o que já foi pago e o que está na conta.
             </p>
 
             {prontas.length > 0 && (
