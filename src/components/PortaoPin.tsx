@@ -22,7 +22,7 @@ export function TelaPin({
     <div className="min-h-screen">
       <AppHeader subtitulo={subtitulo} />
       <main className="mx-auto max-w-3xl px-4 pt-8">
-        <h1 className="text-3xl font-extrabold">{titulo}</h1>
+        <h1 className="text-3xl font-bold">{titulo}</h1>
         <p className="mt-2 text-lg text-muted-foreground">
           Digite o PIN da barraca. Este aparelho fica lembrado por 30 dias.
         </p>
@@ -53,17 +53,17 @@ export function TelaPin({
             }}
             aria-label="PIN da barraca"
             placeholder="••••"
-            className="w-full rounded-2xl border-2 border-border bg-card px-4 py-4 text-center text-3xl font-extrabold tracking-widest"
+            className="w-full rounded-2xl border border-border bg-card px-4 py-4 text-center text-3xl font-bold tracking-widest"
           />
           {erro && (
-            <p className="text-lg font-bold text-destructive">
+            <p className="text-lg font-semibold text-destructive">
               PIN incorreto ou sem internet. Tente de novo.
             </p>
           )}
           <button disabled={conferindo} className="btn-base bg-primary text-primary-foreground">
             {conferindo ? "Conferindo…" : "Entrar"}
           </button>
-          <Link to="/" className="btn-base border-2 border-border bg-card">
+          <Link to="/" className="btn-base border border-border bg-card">
             Voltar ao início
           </Link>
         </form>

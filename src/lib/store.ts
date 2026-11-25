@@ -259,7 +259,9 @@ export const atualizarProduto = (produtoId: string, patch: Partial<Produto>) => 
     vegetariano?: boolean;
     vegano?: boolean;
     opcoes?: GrupoOpcao[];
+    custo?: number | null;
   } = {};
+  if (patch.custo !== undefined) limpo.custo = patch.custo;
   if (patch.descricao !== undefined) limpo.descricao = patch.descricao;
   if (patch.vegetariano !== undefined) limpo.vegetariano = patch.vegetariano;
   if (patch.vegano !== undefined) limpo.vegano = patch.vegano;

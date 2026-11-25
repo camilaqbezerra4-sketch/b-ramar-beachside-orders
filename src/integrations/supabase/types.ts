@@ -100,6 +100,7 @@ export type Database = {
       itens_pedido: {
         Row: {
           criado_em: string
+          custo: number | null
           id: string
           nome_produto: string
           pedido_id: string
@@ -110,6 +111,7 @@ export type Database = {
         }
         Insert: {
           criado_em?: string
+          custo?: number | null
           id?: string
           nome_produto: string
           pedido_id: string
@@ -120,6 +122,7 @@ export type Database = {
         }
         Update: {
           criado_em?: string
+          custo?: number | null
           id?: string
           nome_produto?: string
           pedido_id?: string
@@ -302,6 +305,7 @@ export type Database = {
         Row: {
           barraca_id: string
           categoria: string
+          custo: number | null
           criado_em: string
           descricao: string
           disponivel: boolean
@@ -317,6 +321,7 @@ export type Database = {
         Insert: {
           barraca_id: string
           categoria?: string
+          custo?: number | null
           criado_em?: string
           descricao?: string
           disponivel?: boolean
@@ -332,6 +337,7 @@ export type Database = {
         Update: {
           barraca_id?: string
           categoria?: string
+          custo?: number | null
           criado_em?: string
           descricao?: string
           disponivel?: boolean

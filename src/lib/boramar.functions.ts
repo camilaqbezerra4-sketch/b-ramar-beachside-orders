@@ -8,7 +8,13 @@ import { createServerFn } from "@tanstack/react-start";
 import { useSession } from "@tanstack/react-start/server";
 import { createHash, timingSafeEqual } from "node:crypto";
 import { gerarCodigoPix } from "./pix";
-import { aplicarEscolhas, limparObs, sanitizarOpcoes, SEPARADOR_OBS, type Escolhas } from "./opcoes";
+import {
+  aplicarEscolhas,
+  limparObs,
+  sanitizarOpcoes,
+  SEPARADOR_OBS,
+  type Escolhas,
+} from "./opcoes";
 import type { Json } from "@/integrations/supabase/types";
 
 const HORA = 60 * 60 * 1000;
@@ -143,6 +149,7 @@ type LinhaPedido = {
     nome_produto: string;
     quantidade: number;
     preco: number | string;
+    custo?: number | string | null;
   }>;
 };
 
@@ -170,6 +177,7 @@ function formatarPedido(p: LinhaPedido) {
       nome_produto: i.nome_produto,
       quantidade: i.quantidade,
       preco: Number(i.preco),
+      custo: i.custo == null ? null : Number(i.custo),
     })),
   };
 }
@@ -188,12 +196,13 @@ async function pedidosDesde(barracaId: string, desdeMs: number) {
   return ((data ?? []) as unknown as LinhaPedido[]).map(formatarPedido);
 }
 
-async function produtosDa(barracaId: string) {
+/** comCusto: só o painel da barraca vê o custo dos itens. */
+async function produtosDa(barracaId: string, comCusto = false) {
   const sb = await db();
   const { data, error } = await sb
     .from("produtos")
     .select(
-      "id, barraca_id, nome, categoria, preco, disponivel, ordem, descricao, vegetariano, vegano, opcoes",
+      "id, barraca_id, nome, categoria, preco, disponivel, ordem, descricao, vegetariano, vegano, opcoes, custo",
     )
     .eq("barraca_id", barracaId)
     .order("categoria")
@@ -212,6 +221,7 @@ async function produtosDa(barracaId: string) {
     vegetariano: !!p.vegetariano,
     vegano: !!p.vegano,
     opcoes: sanitizarOpcoes(p.opcoes),
+    custo: comCusto && p.custo != null ? Number(p.custo) : null,
   }));
 }
 
@@ -383,7 +393,13 @@ export interface EntradaPedido {
   gorjeta: number;
   /** "final" = pôr na conta da mesa e pagar no fim */
   forma_pagamento: "pix" | "cartao" | "final";
-  itens: Array<{ id: string; produto_id: string; quantidade: number; escolhas?: Escolhas; obs?: string }>;
+  itens: Array<{
+    id: string;
+    produto_id: string;
+    quantidade: number;
+    escolhas?: Escolhas;
+    obs?: string;
+  }>;
 }
 
 /** O que acontece com o pedido depois de enviado. */
@@ -473,7 +489,7 @@ export const enviarPedido = createServerFn({ method: "POST" })
     const ids = [...new Set(itens.map((i) => i.produto_id))];
     const { data: produtos, error: erroProdutos } = await sb
       .from("produtos")
-      .select("id, nome, preco, disponivel, opcoes")
+      .select("id, nome, preco, disponivel, opcoes, custo")
       .eq("barraca_id", barraca.id)
       .in("id", ids);
     if (erroProdutos) throw erroProdutos;
@@ -498,9 +514,13 @@ export const enviarPedido = createServerFn({ method: "POST" })
         id: i.id,
         pedido_id: data.id,
         produto_id: p.id,
-        nome_produto: (obs ? `${r.nome.slice(0, 200 - SEPARADOR_OBS.length - obs.length)}${SEPARADOR_OBS}${obs}` : r.nome).slice(0, 200),
+        nome_produto: (obs
+          ? `${r.nome.slice(0, 200 - SEPARADOR_OBS.length - obs.length)}${SEPARADOR_OBS}${obs}`
+          : r.nome
+        ).slice(0, 200),
         quantidade: Number(i.quantidade),
         preco: r.precoUnitario,
+        custo: p.custo == null ? null : Number(p.custo),
       });
     }
     const consumo = linhas.reduce((s, l) => s + l.preco * l.quantidade, 0);
@@ -748,7 +768,7 @@ export const carregarPainel = createServerFn({ method: "GET" })
     const desde = Date.now() - JANELA_OPERACAO;
     const [mesas, produtos, garcons, pedidos, liberacoes, servicos] = await Promise.all([
       mesasDa(barraca.id),
-      produtosDa(barraca.id),
+      produtosDa(barraca.id, true),
       sb
         .from("garcons")
         .select("id, barraca_id, nome, chave_pix")
@@ -817,6 +837,7 @@ export type AcaoPainel =
         vegetariano?: boolean;
         vegano?: boolean;
         opcoes?: unknown;
+        custo?: number | null;
       };
     }
   | { tipo: "criarProduto"; nome: string; categoria: string; preco: number }
@@ -900,10 +921,19 @@ export const acaoPainel = createServerFn({ method: "POST" })
           vegetariano?: boolean;
           vegano?: boolean;
           opcoes?: Json;
+          custo?: number | null;
         } = {};
         if (a.patch.descricao !== undefined) patch.descricao = texto(a.patch.descricao, 160);
         if (a.patch.vegetariano !== undefined) patch.vegetariano = !!a.patch.vegetariano;
         if (a.patch.vegano !== undefined) patch.vegano = !!a.patch.vegano;
+        if (a.patch.custo !== undefined) {
+          if (a.patch.custo === null) patch.custo = null;
+          else {
+            const c = Math.round(numero(a.patch.custo) * 100) / 100;
+            if (!(c >= 0 && c <= 100000)) throw new Error("Custo inválido.");
+            patch.custo = c;
+          }
+        }
         if (a.patch.opcoes !== undefined)
           patch.opcoes = sanitizarOpcoes(a.patch.opcoes) as unknown as Json;
         if (a.patch.nome !== undefined) patch.nome = texto(a.patch.nome, 80);

@@ -3,7 +3,7 @@ import { atualizarProduto, formatarReal } from "@/lib/store";
 import { idDe, modeloCaipirinha, type GrupoOpcao } from "@/lib/opcoes";
 import type { Produto } from "@/lib/types";
 
-const campo = "rounded-xl border-2 border-border bg-background px-3 py-2 text-base font-bold";
+const campo = "rounded-xl border border-border bg-background px-3 py-2 text-base font-semibold";
 const real = (v: string) => {
   const n = Number(v.replace(",", "."));
   return Number.isFinite(n) && n >= 0 ? Math.round(n * 100) / 100 : 0;
@@ -49,7 +49,7 @@ export function EditorOpcoes({ produto }: { produto: Produto }) {
     return (
       <button
         onClick={() => setAberto(true)}
-        className="btn-base border-2 border-border bg-card text-left"
+        className="btn-base border border-border bg-card text-left"
       >
         {grupos.length
           ? `Escolhas: ${grupos.map((g) => g.nome).join(", ")} (${total} opções) · editar`
@@ -58,9 +58,9 @@ export function EditorOpcoes({ produto }: { produto: Produto }) {
     );
 
   return (
-    <div className="grid gap-4 rounded-2xl border-2 border-primary/40 bg-background p-3">
+    <div className="grid gap-4 rounded-2xl border border-primary/40 bg-background p-3">
       <div className="flex flex-wrap items-center gap-2">
-        <p className="flex-1 text-lg font-extrabold">Escolhas de {produto.nome}</p>
+        <p className="flex-1 text-lg font-bold">Escolhas de {produto.nome}</p>
         <button
           onClick={() => {
             if (mudou && !window.confirm("Sair sem salvar as mudanças?")) return;
@@ -68,7 +68,7 @@ export function EditorOpcoes({ produto }: { produto: Produto }) {
             setMudou(false);
             setAberto(false);
           }}
-          className="btn-base border-2 border-border bg-card"
+          className="btn-base border border-border bg-card"
         >
           Fechar
         </button>
@@ -90,7 +90,7 @@ export function EditorOpcoes({ produto }: { produto: Produto }) {
       )}
 
       {grupos.map((g, gi) => (
-        <section key={g.id} className="grid gap-2 rounded-xl border-2 border-border bg-card p-3">
+        <section key={g.id} className="grid gap-2 rounded-xl border border-border bg-card p-3">
           <div className="flex flex-wrap items-center gap-2">
             <input
               value={g.nome}
@@ -103,17 +103,17 @@ export function EditorOpcoes({ produto }: { produto: Produto }) {
                 if (window.confirm(`Apagar o grupo ${g.nome}?`))
                   editar((l) => l.filter((_, i) => i !== gi));
               }}
-              className="btn-base border-2 border-border text-destructive"
+              className="btn-base border border-border text-destructive"
             >
               Apagar grupo
             </button>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 text-base font-bold">
+          <div className="flex flex-wrap items-center gap-2 text-base font-semibold">
             <button
               onClick={() => editar((l) => (l[gi] && (l[gi].min = g.min ? 0 : 1), l))}
               aria-pressed={g.min > 0}
-              className={`btn-base border-2 ${g.min ? "border-primary bg-primary text-primary-foreground" : "border-border"}`}
+              className={`btn-base border ${g.min ? "border-primary bg-primary text-primary-foreground" : "border-border"}`}
             >
               {g.min ? "Obrigatório" : "Opcional"}
             </button>
@@ -161,7 +161,7 @@ export function EditorOpcoes({ produto }: { produto: Produto }) {
             </p>
           )}
 
-          <p className="text-sm font-bold text-muted-foreground">
+          <p className="text-sm font-semibold text-muted-foreground">
             Toque para marcar o que tem (verde) e o que acabou.
           </p>
           <div className="grid gap-2">
@@ -180,7 +180,7 @@ export function EditorOpcoes({ produto }: { produto: Produto }) {
                   {it.nome}
                   {it.apelido ? ` (${it.apelido})` : ""}
                 </button>
-                <label className="flex items-center gap-1 text-base font-bold">
+                <label className="flex items-center gap-1 text-base font-semibold">
                   + R$
                   <input
                     defaultValue={it.preco ? String(it.preco) : ""}
@@ -204,7 +204,7 @@ export function EditorOpcoes({ produto }: { produto: Produto }) {
                     )
                   }
                   aria-label={`Tirar ${it.nome}`}
-                  className="btn-base border-2 border-border px-3 text-destructive"
+                  className="btn-base border border-border px-3 text-destructive"
                 >
                   ✕
                 </button>
@@ -234,7 +234,7 @@ export function EditorOpcoes({ produto }: { produto: Produto }) {
                 });
                 setNovoItem((n) => ({ ...n, [g.id]: "" }));
               }}
-              className="btn-base border-2 border-border bg-card"
+              className="btn-base border border-border bg-card"
             >
               Adicionar
             </button>
@@ -255,7 +255,7 @@ export function EditorOpcoes({ produto }: { produto: Produto }) {
               return [...l, { id, nome: nome.trim(), min: 1, max: 1, precoMistura: 0, itens: [] }];
             });
           }}
-          className="btn-base border-2 border-border bg-card"
+          className="btn-base border border-border bg-card"
         >
           + Grupo de escolha
         </button>

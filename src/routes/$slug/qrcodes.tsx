@@ -52,7 +52,7 @@ function QrCodesPage() {
   }, [chaves, slug]);
 
   if (!pronto) {
-    return <p className="p-6 text-xl font-bold">Preparando os QR Codes…</p>;
+    return <p className="p-6 text-xl font-semibold">Preparando os QR Codes…</p>;
   }
 
   return (
@@ -66,7 +66,7 @@ function QrCodesPage() {
       `}</style>
 
       <div className="sem-impressao mx-auto mb-5 flex max-w-3xl flex-wrap items-center gap-3">
-        <h1 className="flex-1 text-3xl font-extrabold">QR Codes das mesas</h1>
+        <h1 className="flex-1 text-3xl font-bold">QR Codes das mesas</h1>
         <button
           onClick={() => window.print()}
           className="btn-base bg-primary text-primary-foreground"
@@ -76,14 +76,14 @@ function QrCodesPage() {
         <Link
           to="/$slug/painel"
           params={{ slug }}
-          className="btn-base border-2 border-border bg-card"
+          className="btn-base border border-border bg-card"
         >
           Voltar ao painel
         </Link>
       </div>
 
       {comQr.length === 0 ? (
-        <p className="mx-auto max-w-3xl text-lg font-bold">
+        <p className="mx-auto max-w-3xl text-lg font-semibold">
           Nenhuma mesa está marcada como “Com QR Code”.
         </p>
       ) : (
@@ -94,7 +94,7 @@ function QrCodesPage() {
               className="folha-qr card-praia flex flex-col items-center gap-2 p-4 text-center"
               style={{ height: "128mm" }}
             >
-              <p className="text-lg font-extrabold">{barraca.nome}</p>
+              <p className="text-lg font-bold">{barraca.nome}</p>
               {imagens[m.id] ? (
                 <img
                   src={imagens[m.id]}
@@ -104,7 +104,7 @@ function QrCodesPage() {
               ) : (
                 <div className="h-40 w-40 animate-pulse rounded-xl bg-sand" />
               )}
-              <p className="text-5xl font-extrabold">Mesa {m.numero}</p>
+              <p className="text-5xl font-bold">Mesa {m.numero}</p>
               <p className="text-base text-muted-foreground">
                 Aponte a câmera e peça da sua cadeira
               </p>

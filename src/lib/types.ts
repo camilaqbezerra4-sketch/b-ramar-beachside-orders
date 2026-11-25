@@ -49,6 +49,8 @@ export interface Produto {
   vegano: boolean;
   /** grupos de escolha (ex.: bebida e fruta da caipirinha) */
   opcoes: GrupoOpcao[];
+  /** custo do item para a barraca (só no painel; nunca vai para o cliente) */
+  custo: number | null;
 }
 
 export interface ItemPedido {
@@ -58,6 +60,8 @@ export interface ItemPedido {
   nome_produto: string;
   quantidade: number;
   preco: number;
+  /** custo de uma unidade no momento da venda (null = não informado) */
+  custo: number | null;
 }
 
 export interface Pedido {

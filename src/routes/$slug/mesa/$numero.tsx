@@ -179,7 +179,7 @@ function ClientePage() {
     return (
       <div className="min-h-screen">
         <AppHeader subtitulo="Carregando" />
-        <p className="mx-auto max-w-3xl px-4 pt-8 text-xl font-bold">Carregando o cardápio…</p>
+        <p className="mx-auto max-w-3xl px-4 pt-8 text-xl font-semibold">Carregando o cardápio…</p>
       </div>
     );
   }
@@ -189,7 +189,7 @@ function ClientePage() {
       <div className="min-h-screen">
         <AppHeader />
         <main className="mx-auto max-w-3xl px-4 pt-8">
-          <p className="text-xl font-bold">O cardápio não abriu. Confere a internet?</p>
+          <p className="text-xl font-semibold">O cardápio não abriu. Confere a internet?</p>
           <button
             onClick={() => dados.recarregar()}
             className="btn-base mt-4 bg-primary text-primary-foreground"
@@ -205,7 +205,7 @@ function ClientePage() {
     return (
       <div className="min-h-screen">
         <AppHeader />
-        <p className="mx-auto max-w-3xl px-4 pt-8 text-xl font-bold">
+        <p className="mx-auto max-w-3xl px-4 pt-8 text-xl font-semibold">
           Esta barraca não está recebendo pedidos agora.
         </p>
       </div>
@@ -217,7 +217,7 @@ function ClientePage() {
       <div className="min-h-screen">
         <AppHeader titulo={barraca.nome} />
         <main className="mx-auto max-w-3xl px-4 pt-8">
-          <p className="text-2xl font-extrabold">Não achamos a mesa {numero} aqui.</p>
+          <p className="text-2xl font-bold">Não achamos a mesa {numero} aqui.</p>
           <p className="mt-2 text-lg text-muted-foreground">
             Chama o garçom que ele anota seu pedido.
           </p>
@@ -236,7 +236,7 @@ function ClientePage() {
 
       {etapa === "cardapio" && (
         <main className="mx-auto max-w-3xl px-4 pt-5">
-          <h1 className="text-3xl font-extrabold">Cardápio</h1>
+          <h1 className="text-3xl font-bold">Cardápio</h1>
           <p className="mt-1 text-base text-muted-foreground">{barraca.nome}</p>
 
           <BuscaCardapio valor={busca} aoMudar={setBusca} />
@@ -247,7 +247,7 @@ function ClientePage() {
                 <button
                   key={c}
                   onClick={() => setAba(c)}
-                  className={`btn-base shrink-0 border-2 ${
+                  className={`btn-base shrink-0 border ${
                     aba === c
                       ? "border-primary bg-primary text-primary-foreground"
                       : "border-border bg-card text-foreground"
@@ -261,7 +261,7 @@ function ClientePage() {
 
           <ul className="mt-2 grid gap-3">
             {termo && !produtos.some((p) => combinaBusca(p, termo)) && (
-              <li className="text-lg font-bold text-muted-foreground">
+              <li className="text-lg font-semibold text-muted-foreground">
                 Nada com “{busca.trim()}” no cardápio. Tenta outra palavra?
               </li>
             )}
@@ -287,7 +287,7 @@ function ClientePage() {
                   }`}
                 >
                   <div className="min-w-0 flex-1">
-                    <p className="text-xl font-extrabold">
+                    <p className="text-xl font-bold">
                       {p.nome}
                       <SelosVeg produto={p} />
                     </p>
@@ -295,7 +295,7 @@ function ClientePage() {
                       <p className="text-base text-muted-foreground">{p.descricao}</p>
                     )}
                     {comEscolhas(p) && (
-                      <p className="text-sm font-bold text-primary">
+                      <p className="text-sm font-semibold text-primary">
                         Escolha{" "}
                         {p.opcoes
                           .filter((g) => g.itens.length)
@@ -303,11 +303,11 @@ function ClientePage() {
                           .join(" e ")}
                       </p>
                     )}
-                    <p className="text-lg font-bold text-muted-foreground">
+                    <p className="text-lg font-semibold text-muted-foreground">
                       {comEscolhas(p) ? "a partir de " : ""}
                       {formatarReal(p.preco)}
                       {!podePedir(p) && (
-                        <span className="ml-2 rounded-full bg-destructive px-2 py-0.5 text-sm font-extrabold text-destructive-foreground">
+                        <span className="ml-2 rounded-full bg-destructive px-2 py-0.5 text-sm font-bold text-destructive-foreground">
                           acabou
                         </span>
                       )}
@@ -319,11 +319,11 @@ function ClientePage() {
                         <button
                           aria-label={`Remover um ${p.nome}`}
                           onClick={() => carrinho.tirarDoProduto(p.id)}
-                          className="btn-base h-12 w-12 border-2 border-primary bg-card text-2xl"
+                          className="btn-base h-12 w-12 border border-primary bg-card text-2xl"
                         >
                           −
                         </button>
-                        <span className="w-6 text-center text-xl font-extrabold">
+                        <span className="w-6 text-center text-xl font-bold">
                           {carrinho.quantidadeDo(p.id)}
                         </span>
                         <button
@@ -350,10 +350,10 @@ function ClientePage() {
           {linhas.length > 0 ? (
             <BarraFixa>
               <div className="flex-1">
-                <p className="text-sm font-bold text-muted-foreground">
+                <p className="text-sm font-semibold text-muted-foreground">
                   {carrinho.quantidadeTotal} itens
                 </p>
-                <p className="text-2xl font-extrabold">{formatarReal(consumo)}</p>
+                <p className="text-2xl font-bold">{formatarReal(consumo)}</p>
               </div>
               <button
                 onClick={() => setEtapa("checkout")}
@@ -365,8 +365,8 @@ function ClientePage() {
           ) : emAberto > 0 ? (
             <BarraFixa>
               <div className="flex-1">
-                <p className="text-sm font-bold text-muted-foreground">Na conta da mesa</p>
-                <p className="text-2xl font-extrabold">{formatarReal(emAberto)}</p>
+                <p className="text-sm font-semibold text-muted-foreground">Na conta da mesa</p>
+                <p className="text-2xl font-bold">{formatarReal(emAberto)}</p>
               </div>
               <button
                 onClick={() => setEtapa("conta")}
@@ -378,8 +378,8 @@ function ClientePage() {
           ) : servicoPendente > 0 ? (
             <BarraFixa>
               <div className="flex-1">
-                <p className="text-sm font-bold text-muted-foreground">Serviço do garçom</p>
-                <p className="text-2xl font-extrabold">{formatarReal(servicoPendente)}</p>
+                <p className="text-sm font-semibold text-muted-foreground">Serviço do garçom</p>
+                <p className="text-2xl font-bold">{formatarReal(servicoPendente)}</p>
               </div>
               <button
                 onClick={() => setEtapa("servico")}
@@ -405,24 +405,24 @@ function ClientePage() {
 
       {etapa === "checkout" && (
         <main className="mx-auto max-w-3xl px-4 pt-5">
-          <h1 className="text-3xl font-extrabold">Seu pedido</h1>
-          <p className="mt-1 text-lg font-bold">Mesa {mesa.numero}</p>
+          <h1 className="text-3xl font-bold">Seu pedido</h1>
+          <p className="mt-1 text-lg font-semibold">Mesa {mesa.numero}</p>
 
-          <ul className="card-praia mt-4 divide-y-2 divide-border p-4">
+          <ul className="card-praia mt-4 divide-y divide-border p-4">
             {linhas.map((l) => (
               <li key={l.chave} className="flex items-center justify-between gap-2 py-2 text-lg">
                 <span className="min-w-0 flex-1 font-semibold">
                   {l.quantidade}× {l.nome}
                   <CampoObs obs={l.obs} aoMudar={(o) => carrinho.definirObs(l.chave, o)} />
                 </span>
-                <span className="font-extrabold">{formatarReal(l.preco * l.quantidade)}</span>
+                <span className="font-bold">{formatarReal(l.preco * l.quantidade)}</span>
                 <button
                   aria-label={`Tirar um ${l.nome}`}
                   onClick={() => {
                     carrinho.tirar(l.chave);
                     if (carrinho.quantidadeTotal <= 1) setEtapa("cardapio");
                   }}
-                  className="btn-base h-10 w-10 border-2 border-border bg-card px-0 text-xl"
+                  className="btn-base h-10 w-10 border border-border bg-card px-0 text-xl"
                 >
                   −
                 </button>
@@ -436,7 +436,7 @@ function ClientePage() {
             </p>
           ) : (
             <>
-              <h2 className="mt-6 text-2xl font-extrabold">Quer deixar uma caixinha?</h2>
+              <h2 className="mt-6 text-2xl font-bold">Quer deixar uma caixinha?</h2>
               <p className="text-base text-muted-foreground">É opcional 😊</p>
               <div className="mt-3 flex flex-wrap gap-2">
                 {[0, 2, 5, 10].map((v) => (
@@ -447,7 +447,7 @@ function ClientePage() {
                       setOutroValor("");
                       if (v === 0) setErroGarcom(false);
                     }}
-                    className={`btn-base border-2 ${
+                    className={`btn-base border ${
                       caixinha === v && outroValor === ""
                         ? "border-accent bg-accent text-accent-foreground"
                         : "border-border bg-card"
@@ -465,7 +465,7 @@ function ClientePage() {
                     const n = Number(e.target.value.replace(",", "."));
                     setCaixinha(Number.isFinite(n) && n > 0 ? n : 0);
                   }}
-                  className="btn-base w-36 border-2 border-border bg-card text-left"
+                  className="btn-base w-36 border border-border bg-card text-left"
                 />
               </div>
               {caixinha > 0 && (
@@ -483,7 +483,7 @@ function ClientePage() {
           )}
 
           <div className="card-praia mt-6 p-4">
-            <div className="flex justify-between text-2xl font-extrabold">
+            <div className="flex justify-between text-2xl font-bold">
               <span>Total</span>
               <span>{formatarReal(consumo + caixinhaUsada)}</span>
             </div>
@@ -491,10 +491,10 @@ function ClientePage() {
           </div>
 
           {aviso && (
-            <p className="card-praia mt-4 p-3 text-lg font-bold text-destructive">{aviso}</p>
+            <p className="card-praia mt-4 p-3 text-lg font-semibold text-destructive">{aviso}</p>
           )}
 
-          <h2 className="mt-6 text-xl font-extrabold">Como prefere pagar?</h2>
+          <h2 className="mt-6 text-xl font-bold">Como prefere pagar?</h2>
           <div className="mt-3 grid gap-2">
             <button
               onClick={() => void enviar("pix")}
@@ -514,14 +514,14 @@ function ClientePage() {
               <button
                 onClick={() => void enviar("final")}
                 disabled={enviando}
-                className="btn-base border-2 border-primary bg-card text-primary"
+                className="btn-base border border-primary bg-card text-primary"
               >
                 {enviando ? "Enviando…" : "Pôr na conta e pagar no final"}
               </button>
             )}
             <button
               onClick={() => setEtapa("cardapio")}
-              className="btn-base border-2 border-border bg-card"
+              className="btn-base border border-border bg-card"
             >
               Voltar
             </button>
@@ -531,7 +531,7 @@ function ClientePage() {
 
       {etapa === "pix" && (
         <main className="mx-auto max-w-3xl px-4 pt-5">
-          <h1 className="text-3xl font-extrabold">Bora pagar no Pix</h1>
+          <h1 className="text-3xl font-bold">Bora pagar no Pix</h1>
           <p className="mt-1 text-lg">
             Mesa {mesa.numero} · <strong>{formatarReal(totalGeral)}</strong>
           </p>
@@ -564,7 +564,7 @@ function ClientePage() {
               setTotalConfirmado(null);
               setEtapa("checkout");
             }}
-            className="btn-base mt-3 w-full border-2 border-border bg-card"
+            className="btn-base mt-3 w-full border border-border bg-card"
           >
             Voltar
           </button>
@@ -629,8 +629,8 @@ function ClientePage() {
 
       {etapa === "conta" && (
         <main className="mx-auto max-w-3xl px-4 pt-5">
-          <h1 className="text-3xl font-extrabold">Sua conta</h1>
-          <p className="mt-1 text-lg font-bold">Mesa {mesa.numero}</p>
+          <h1 className="text-3xl font-bold">Sua conta</h1>
+          <p className="mt-1 text-lg font-semibold">Mesa {mesa.numero}</p>
           {mesaInfo && mesaInfo.emAberto > 0 ? (
             <>
               <ul className="card-praia mt-4 grid gap-1 p-4 text-lg">
@@ -639,13 +639,13 @@ function ClientePage() {
                     {i.quantidade}× <NomeComObs nome={i.nome} />
                   </li>
                 ))}
-                <li className="mt-2 flex justify-between border-t-2 border-border pt-2 text-2xl font-extrabold">
+                <li className="mt-2 flex justify-between border-t-2 border-border pt-2 text-2xl font-bold">
                   <span>Total</span>
                   <span>{formatarReal(mesaInfo.emAberto)}</span>
                 </li>
               </ul>
               {mesaInfo.fechamentoSolicitado ? (
-                <p className="card-praia mt-4 p-4 text-lg font-bold">
+                <p className="card-praia mt-4 p-4 text-lg font-semibold">
                   A barraca já está conferindo seu Pix 👍
                 </p>
               ) : (
@@ -683,13 +683,13 @@ function ClientePage() {
               )}
             </>
           ) : (
-            <p className="card-praia mt-4 p-4 text-lg font-bold">
+            <p className="card-praia mt-4 p-4 text-lg font-semibold">
               Nada em aberto por aqui. Tudo certo! 🌊
             </p>
           )}
           <button
             onClick={() => setEtapa("cardapio")}
-            className="btn-base mt-3 w-full border-2 border-border bg-card"
+            className="btn-base mt-3 w-full border border-border bg-card"
           >
             Voltar
           </button>
@@ -732,7 +732,7 @@ function BarraFixa({ children }: { children: ReactNode }) {
 
 function Calma() {
   return (
-    <p className="card-praia mt-3 p-3 text-lg font-bold">
+    <p className="card-praia mt-3 p-3 text-lg font-semibold">
       A internet deu uma oscilada, mas seu pedido está guardado e vai sozinho assim que o sinal
       voltar.
     </p>
@@ -741,7 +741,7 @@ function Calma() {
 
 function Expirado() {
   return (
-    <p className="card-praia mt-3 p-3 text-lg font-extrabold text-destructive">
+    <p className="card-praia mt-3 p-3 text-lg font-bold text-destructive">
       Esse pedido expirou. Sem problema, é só montar de novo.
     </p>
   );
@@ -767,14 +767,14 @@ function Mensagem({
       <p className="text-6xl" aria-hidden>
         {emoji}
       </p>
-      <h1 className="mt-4 text-3xl font-extrabold">{titulo}</h1>
+      <h1 className="mt-4 text-3xl font-bold">{titulo}</h1>
       <p className="mt-2 text-lg text-muted-foreground">{texto}</p>
       {rodape}
       <button onClick={aoTocar} className="btn-base mt-6 bg-primary text-primary-foreground">
         {botao}
       </button>
       <div className="mt-3">
-        <Link to="/" className="btn-base border-2 border-border bg-card">
+        <Link to="/" className="btn-base border border-border bg-card">
           Voltar ao início
         </Link>
       </div>
@@ -795,13 +795,13 @@ function EscolherGarcom({
 }) {
   return (
     <>
-      <h2 className="mt-6 text-2xl font-extrabold">Quem te atendeu?</h2>
+      <h2 className="mt-6 text-2xl font-bold">Quem te atendeu?</h2>
       <div className="mt-3 flex flex-wrap gap-2">
         {garcons.map((g) => (
           <button
             key={g.id}
             onClick={() => aoEscolher(g.id === escolhido ? "" : g.id)}
-            className={`btn-base border-2 ${
+            className={`btn-base border ${
               escolhido === g.id
                 ? "border-primary bg-primary text-primary-foreground"
                 : "border-border bg-card"
@@ -812,7 +812,7 @@ function EscolherGarcom({
         ))}
       </div>
       {erro && (
-        <p className="mt-2 text-lg font-bold text-destructive">
+        <p className="mt-2 text-lg font-semibold text-destructive">
           Toca no nome de quem te atendeu, assim o valor vai certinho pra pessoa.
         </p>
       )}
@@ -864,19 +864,19 @@ function CaixaPix({ codigo, valor, legenda }: { codigo: string; valor: number; l
         <button
           onClick={() => setRachando((v) => !v)}
           aria-expanded={rachando}
-          className="text-base font-bold text-muted-foreground underline"
+          className="text-base font-semibold text-muted-foreground underline"
         >
           Vai rachar?
         </button>
         {rachando && (
           <div className="card-praia mt-3 p-4">
-            <p className="text-lg font-bold">Dividir por quantos?</p>
+            <p className="text-lg font-semibold">Dividir por quantos?</p>
             <div className="mt-2 flex flex-wrap gap-2">
               {[2, 3, 4, 5, 6, 7, 8].map((n) => (
                 <button
                   key={n}
                   onClick={() => setPessoas(n)}
-                  className={`btn-base border-2 ${
+                  className={`btn-base border ${
                     pessoas === n
                       ? "border-primary bg-primary text-primary-foreground"
                       : "border-border bg-card"
@@ -886,7 +886,7 @@ function CaixaPix({ codigo, valor, legenda }: { codigo: string; valor: number; l
                 </button>
               ))}
             </div>
-            <p className="mt-3 text-2xl font-extrabold">{formatarReal(porPessoa)} cada</p>
+            <p className="mt-3 text-2xl font-bold">{formatarReal(porPessoa)} cada</p>
             <p className="mt-1 text-base text-muted-foreground">
               É só uma conta de cabeça: o Pix continua um só, de {formatarReal(valor)}.
             </p>
@@ -935,7 +935,7 @@ function ServicoDoGarcom({
 
   return (
     <main className="mx-auto max-w-3xl px-4 pt-5">
-      <h1 className="text-3xl font-extrabold">Serviço do garçom</h1>
+      <h1 className="text-3xl font-bold">Serviço do garçom</h1>
       <p className="mt-1 text-lg text-muted-foreground">
         É opcional, e faz diferença pra quem te atendeu 😊
       </p>
@@ -948,7 +948,7 @@ function ServicoDoGarcom({
                 setValor(sugerido);
                 setOutro("");
               }}
-              className={`btn-base border-2 ${
+              className={`btn-base border ${
                 valor === sugerido && outro === ""
                   ? "border-accent bg-accent text-accent-foreground"
                   : "border-border bg-card"
@@ -965,7 +965,7 @@ function ServicoDoGarcom({
                 const n = Number(e.target.value.replace(",", "."));
                 setValor(Number.isFinite(n) && n > 0 ? n : 0);
               }}
-              className="btn-base w-36 border-2 border-border bg-card text-left"
+              className="btn-base w-36 border border-border bg-card text-left"
             />
           </div>
 
@@ -992,7 +992,7 @@ function ServicoDoGarcom({
       )}
 
       {pix === "sem_chave" && (
-        <p className="card-praia mt-4 p-4 text-lg font-bold">
+        <p className="card-praia mt-4 p-4 text-lg font-semibold">
           Esse garçom ainda não tem Pix por aqui. Pode deixar direto com ele, no dinheiro ou no
           cartão.
         </p>
@@ -1017,7 +1017,7 @@ function ServicoDoGarcom({
         </>
       )}
 
-      <button onClick={aoTerminar} className="btn-base mt-3 w-full border-2 border-border bg-card">
+      <button onClick={aoTerminar} className="btn-base mt-3 w-full border border-border bg-card">
         Agora não
       </button>
     </main>

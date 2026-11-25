@@ -49,7 +49,7 @@ function GarcomPage() {
     return (
       <div className="min-h-screen">
         <AppHeader subtitulo="Carregando" />
-        <p className="mx-auto max-w-xl px-4 pt-8 text-xl font-bold">Carregando…</p>
+        <p className="mx-auto max-w-xl px-4 pt-8 text-xl font-semibold">Carregando…</p>
       </div>
     );
   }
@@ -58,7 +58,7 @@ function GarcomPage() {
     return (
       <div className="min-h-screen">
         <AppHeader subtitulo="Barraca" />
-        <p className="mx-auto max-w-xl px-4 pt-8 text-xl font-bold">
+        <p className="mx-auto max-w-xl px-4 pt-8 text-xl font-semibold">
           Não encontramos esta barraca.
         </p>
       </div>
@@ -91,13 +91,13 @@ function GarcomPage() {
           Lançar pedido
         </button>
 
-        <h2 className="mt-6 text-2xl font-extrabold">Cobrar no cartão</h2>
+        <h2 className="mt-6 text-2xl font-bold">Cobrar no cartão</h2>
         <div className="mt-3 grid gap-3">
           {noCartao.map((p) => (
             <div key={p.id} className="card-praia flex items-center gap-3 p-4">
               <div className="min-w-0 flex-1">
-                <p className="text-xl font-extrabold">Mesa {nomeMesa(p.mesa_id)}</p>
-                <p className="text-lg font-bold">{formatarReal(p.total)}</p>
+                <p className="text-xl font-bold">Mesa {nomeMesa(p.mesa_id)}</p>
+                <p className="text-lg font-semibold">{formatarReal(p.total)}</p>
               </div>
               <button
                 onClick={() => void confirmarPagamento(p.id)}
@@ -112,12 +112,12 @@ function GarcomPage() {
           )}
         </div>
 
-        <h2 className="mt-6 text-2xl font-extrabold">Prontos pra entregar</h2>
+        <h2 className="mt-6 text-2xl font-bold">Prontos pra entregar</h2>
         <div className="mt-3 grid gap-3">
           {prontos.map((p) => (
             <div key={p.id} className="card-praia flex items-center gap-3 p-4">
               <div className="min-w-0 flex-1">
-                <p className="text-xl font-extrabold">Mesa {nomeMesa(p.mesa_id)}</p>
+                <p className="text-xl font-bold">Mesa {nomeMesa(p.mesa_id)}</p>
                 <p className="text-base text-muted-foreground">
                   {p.itens.map((i) => `${i.quantidade}× ${i.nome_produto}`).join(", ")}
                 </p>
@@ -149,11 +149,11 @@ function GarcomPage() {
     const total = carrinho.total;
 
     const campo =
-      "w-full rounded-xl border-2 border-border bg-background px-3 py-3 text-lg font-bold";
+      "w-full rounded-xl border border-border bg-background px-3 py-3 text-lg font-semibold";
 
     return (
       <>
-        <h1 className="text-3xl font-extrabold">Lançar pedido</h1>
+        <h1 className="text-3xl font-bold">Lançar pedido</h1>
         <div className="mt-4 grid gap-3">
           <select
             value={mesaId}
@@ -187,7 +187,7 @@ function GarcomPage() {
                 key={f}
                 onClick={() => setForma(f)}
                 aria-pressed={forma === f}
-                className={`btn-base flex-1 border-2 ${
+                className={`btn-base flex-1 border ${
                   forma === f
                     ? "border-primary bg-primary text-primary-foreground"
                     : "border-border bg-card"
@@ -202,7 +202,7 @@ function GarcomPage() {
         <ItensParaLancar produtos={produtos} carrinho={carrinho} />
 
         <div className="sticky bottom-0 mt-6 grid gap-2 bg-background py-3">
-          <p className="text-2xl font-extrabold">Total {formatarReal(total)}</p>
+          <p className="text-2xl font-bold">Total {formatarReal(total)}</p>
           <button
             disabled={enviando || linhas.length === 0 || !mesaId}
             onClick={async () => {
@@ -232,7 +232,7 @@ function GarcomPage() {
           >
             {enviando ? "Enviando…" : "Enviar pedido"}
           </button>
-          <button onClick={aoFechar} className="btn-base border-2 border-border bg-card">
+          <button onClick={aoFechar} className="btn-base border border-border bg-card">
             Cancelar
           </button>
         </div>

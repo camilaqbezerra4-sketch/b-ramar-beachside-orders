@@ -32,10 +32,10 @@ function Index() {
         <p className="text-6xl" aria-hidden>
           🌊
         </p>
-        <h1 className="mt-4 font-display text-5xl font-extrabold tracking-tight">
+        <h1 className="mt-4 font-display text-5xl font-bold tracking-tight">
           Bóra<span className="text-accent">Mar</span>
         </h1>
-        <p className="mt-4 text-2xl font-bold leading-snug">
+        <p className="mt-4 text-2xl font-semibold leading-snug">
           Pedido na areia, sem fila e sem confusão
         </p>
 

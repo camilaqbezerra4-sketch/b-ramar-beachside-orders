@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   atualizarProduto,
+  formatarReal,
   criarGarcom,
   criarProduto,
   moverProduto,
@@ -34,23 +35,23 @@ export function AbaCardapio({ produtos }: { produtos: Produto[] }) {
 
   return (
     <>
-      <h1 className="text-3xl font-extrabold">Cardápio</h1>
+      <h1 className="text-3xl font-bold">Cardápio</h1>
 
       <div className="card-praia mt-4 grid gap-3 p-4">
-        <p className="text-lg font-extrabold">Adicionar item</p>
+        <p className="text-lg font-bold">Adicionar item</p>
         <input
           value={nome}
           onChange={(e) => setNome(e.target.value)}
           placeholder="Nome do item"
           aria-label="Nome do item"
-          className="w-full rounded-xl border-2 border-border bg-background px-3 py-3 text-lg font-bold"
+          className="w-full rounded-xl border border-border bg-background px-3 py-3 text-lg font-semibold"
         />
         <div className="flex flex-wrap gap-2">
           <select
             value={categoria}
             onChange={(e) => setCategoria(e.target.value)}
             aria-label="Categoria"
-            className="flex-1 rounded-xl border-2 border-border bg-background px-3 py-3 text-lg font-bold"
+            className="flex-1 rounded-xl border border-border bg-background px-3 py-3 text-lg font-semibold"
           >
             {categorias.map((c) => (
               <option key={c} value={c}>
@@ -64,7 +65,7 @@ export function AbaCardapio({ produtos }: { produtos: Produto[] }) {
             inputMode="decimal"
             placeholder="Preço"
             aria-label="Preço"
-            className="w-28 rounded-xl border-2 border-border bg-background px-3 py-3 text-lg font-bold"
+            className="w-28 rounded-xl border border-border bg-background px-3 py-3 text-lg font-semibold"
           />
         </div>
         <input
@@ -72,7 +73,7 @@ export function AbaCardapio({ produtos }: { produtos: Produto[] }) {
           onChange={(e) => setNovaCategoria(e.target.value)}
           placeholder="Ou crie uma categoria nova"
           aria-label="Nova categoria"
-          className="w-full rounded-xl border-2 border-border bg-background px-3 py-3 text-lg font-bold"
+          className="w-full rounded-xl border border-border bg-background px-3 py-3 text-lg font-semibold"
         />
         <button
           onClick={() => void adicionar()}
@@ -88,14 +89,14 @@ export function AbaCardapio({ produtos }: { produtos: Produto[] }) {
         return (
           <section key={c} className="mt-6">
             <div className="flex flex-wrap items-center gap-2">
-              <h2 className="flex-1 text-2xl font-extrabold">{c}</h2>
+              <h2 className="flex-1 text-2xl font-bold">{c}</h2>
               <button
                 onClick={() => {
                   const novo = window.prompt("Novo nome da categoria", c);
                   if (novo && novo.trim() && novo.trim() !== c)
                     void renomearCategoria(c, novo.trim());
                 }}
-                className="btn-base border-2 border-border bg-card"
+                className="btn-base border border-border bg-card"
               >
                 Renomear
               </button>
@@ -111,9 +112,9 @@ export function AbaCardapio({ produtos }: { produtos: Produto[] }) {
                         if (nome && nome !== p.nome) void atualizarProduto(p.id, { nome });
                       }}
                       rotulo={`Nome de ${p.nome}`}
-                      className="min-w-0 flex-1 rounded-xl border-2 border-border bg-background px-3 py-2 text-lg font-extrabold"
+                      className="min-w-0 flex-1 rounded-xl border border-border bg-background px-3 py-2 text-lg font-bold"
                     />
-                    <label className="flex items-center gap-1 text-lg font-bold">
+                    <label className="flex items-center gap-1 text-lg font-semibold">
                       R$
                       <CampoSalvaAoSair
                         valor={String(p.preco)}
@@ -124,9 +125,36 @@ export function AbaCardapio({ produtos }: { produtos: Produto[] }) {
                             void atualizarProduto(p.id, { preco });
                         }}
                         rotulo={`Preço de ${p.nome}`}
-                        className="w-24 rounded-xl border-2 border-border bg-background px-2 py-2 text-lg font-bold"
+                        className="w-24 rounded-xl border border-border bg-background px-2 py-2 text-lg font-semibold"
                       />
                     </label>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-base text-muted-foreground">
+                    <label className="flex items-center gap-1">
+                      Custo R$
+                      <CampoSalvaAoSair
+                        valor={p.custo == null ? "" : String(p.custo)}
+                        numerico
+                        placeholder="—"
+                        aoSalvar={(v) => {
+                          const t = v.trim();
+                          if (!t) {
+                            if (p.custo != null) void atualizarProduto(p.id, { custo: null });
+                            return;
+                          }
+                          const custo = Number(t.replace(",", "."));
+                          if (Number.isFinite(custo) && custo >= 0 && custo !== p.custo)
+                            void atualizarProduto(p.id, { custo });
+                        }}
+                        rotulo={`Custo de ${p.nome}`}
+                        className="w-20 rounded-lg border border-border bg-background px-2 py-1 text-base"
+                      />
+                    </label>
+                    <span>
+                      {p.custo != null && p.preco > 0
+                        ? `Sobra ${formatarReal(p.preco - p.custo)} por unidade (${Math.round(((p.preco - p.custo) / p.preco) * 100)}%)`
+                        : "Opcional: quanto este item custa para a barraca. Só a equipe vê."}
+                    </span>
                   </div>
                   <CampoSalvaAoSair
                     valor={p.descricao}
@@ -136,7 +164,7 @@ export function AbaCardapio({ produtos }: { produtos: Produto[] }) {
                     }}
                     rotulo={`Descrição de ${p.nome}`}
                     placeholder="Descrição (opcional): ingredientes, tamanho, serve quantos…"
-                    className="w-full rounded-xl border-2 border-border bg-background px-3 py-2 text-base font-semibold"
+                    className="w-full rounded-xl border border-border bg-background px-3 py-2 text-base font-semibold"
                   />
                   <div className="flex flex-wrap gap-2">
                     <button
@@ -149,7 +177,7 @@ export function AbaCardapio({ produtos }: { produtos: Produto[] }) {
                         )
                       }
                       aria-pressed={p.vegetariano}
-                      className={`btn-base border-2 ${p.vegetariano ? "border-success bg-success text-success-foreground" : "border-border bg-card"}`}
+                      className={`btn-base border ${p.vegetariano ? "border-success bg-success text-success-foreground" : "border-border bg-card"}`}
                     >
                       🌱 Vegetariano
                     </button>
@@ -161,7 +189,7 @@ export function AbaCardapio({ produtos }: { produtos: Produto[] }) {
                         )
                       }
                       aria-pressed={p.vegano}
-                      className={`btn-base border-2 ${p.vegano ? "border-success bg-success text-success-foreground" : "border-border bg-card"}`}
+                      className={`btn-base border ${p.vegano ? "border-success bg-success text-success-foreground" : "border-border bg-card"}`}
                     >
                       🌱 Vegano
                     </button>
@@ -183,7 +211,7 @@ export function AbaCardapio({ produtos }: { produtos: Produto[] }) {
                       disabled={i === 0}
                       onClick={() => void moverProduto(p.id, -1)}
                       aria-label={`Subir ${p.nome}`}
-                      className="btn-base border-2 border-border bg-card"
+                      className="btn-base border border-border bg-card"
                     >
                       ↑
                     </button>
@@ -191,7 +219,7 @@ export function AbaCardapio({ produtos }: { produtos: Produto[] }) {
                       disabled={i === daCategoria.length - 1}
                       onClick={() => void moverProduto(p.id, 1)}
                       aria-label={`Descer ${p.nome}`}
-                      className="btn-base border-2 border-border bg-card"
+                      className="btn-base border border-border bg-card"
                     >
                       ↓
                     </button>
@@ -200,7 +228,7 @@ export function AbaCardapio({ produtos }: { produtos: Produto[] }) {
                         if (window.confirm(`Remover ${p.nome} do cardápio?`))
                           void removerProduto(p.id);
                       }}
-                      className="btn-base border-2 border-border bg-card text-destructive"
+                      className="btn-base border border-border bg-card text-destructive"
                     >
                       Remover
                     </button>
@@ -224,15 +252,15 @@ export function AbaEquipe() {
 
   return (
     <>
-      <h1 className="text-3xl font-extrabold">Equipe</h1>
+      <h1 className="text-3xl font-bold">Equipe</h1>
       <div className="card-praia mt-4 grid gap-3 p-4">
-        <p className="text-lg font-extrabold">Adicionar garçom</p>
+        <p className="text-lg font-bold">Adicionar garçom</p>
         <input
           value={nome}
           onChange={(e) => setNome(e.target.value)}
           placeholder="Nome"
           aria-label="Nome do garçom"
-          className="w-full rounded-xl border-2 border-border bg-background px-3 py-3 text-lg font-bold"
+          className="w-full rounded-xl border border-border bg-background px-3 py-3 text-lg font-semibold"
         />
         <CampoChavePix valor={pix} aoMudar={setPix} rotulo="Chave Pix do garçom" />
         <button
@@ -253,14 +281,14 @@ export function AbaEquipe() {
         {garcons.map((g) => (
           <div key={g.id} className="card-praia flex items-center gap-3 p-4">
             <div className="min-w-0 flex-1">
-              <p className="text-xl font-extrabold">{g.nome}</p>
+              <p className="text-xl font-bold">{g.nome}</p>
               <p className="text-base text-muted-foreground">{g.chave_pix || "sem chave Pix"}</p>
             </div>
             <button
               onClick={() => {
                 if (window.confirm(`Remover ${g.nome} da equipe?`)) void removerGarcom(g.id);
               }}
-              className="btn-base border-2 border-border bg-card text-destructive"
+              className="btn-base border border-border bg-card text-destructive"
             >
               Remover
             </button>

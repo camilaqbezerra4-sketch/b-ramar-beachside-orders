@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import QRCode from "qrcode";
 import { AppHeader } from "@/components/AppHeader";
 import { SuporteWhatsApp } from "@/components/SuporteWhatsApp";
@@ -134,7 +134,7 @@ function minutosDesde(iso: string) {
 function MarcadorGrupo({ novo }: { novo: boolean }) {
   return (
     <span
-      className={`rounded-full px-3 py-1 text-sm font-extrabold ${
+      className={`rounded-full px-3 py-1 text-sm font-bold ${
         novo ? "bg-accent text-accent-foreground" : "bg-muted text-muted-foreground"
       }`}
     >
@@ -266,7 +266,7 @@ function PainelPage() {
     return (
       <div className="min-h-screen">
         <AppHeader subtitulo="Painel" />
-        <p className="mx-auto max-w-3xl px-4 pt-8 text-xl font-bold">Carregando os pedidos…</p>
+        <p className="mx-auto max-w-3xl px-4 pt-8 text-xl font-semibold">Carregando os pedidos…</p>
       </div>
     );
   }
@@ -275,7 +275,7 @@ function PainelPage() {
     return (
       <div className="min-h-screen">
         <AppHeader subtitulo="Painel" />
-        <p className="mx-auto max-w-3xl px-4 pt-8 text-xl font-bold">Barraca não encontrada.</p>
+        <p className="mx-auto max-w-3xl px-4 pt-8 text-xl font-semibold">Barraca não encontrada.</p>
       </div>
     );
   }
@@ -318,7 +318,7 @@ function PainelPage() {
         acao={
           <button
             onClick={() => void sairDoPainel(slug)}
-            className="rounded-full bg-primary-foreground/15 px-3 py-1 text-sm font-bold"
+            className="rounded-full bg-primary-foreground/15 px-3 py-1 text-sm font-semibold"
           >
             Sair
           </button>
@@ -328,7 +328,7 @@ function PainelPage() {
       {aba === "cozinha" && !somAtivo && (
         <div className="sticky top-[60px] z-40 border-b-2 border-border bg-accent px-4 py-3 text-accent-foreground">
           <div className="mx-auto flex max-w-3xl flex-wrap items-center gap-3">
-            <p className="flex-1 text-lg font-extrabold">
+            <p className="flex-1 text-lg font-bold">
               Som desativado: você não vai ouvir os itens novos.
             </p>
             <button
@@ -352,7 +352,7 @@ function PainelPage() {
             <button
               key={a.id}
               onClick={() => setAba(a.id)}
-              className={`btn-base shrink-0 border-2 ${
+              className={`btn-base shrink-0 border ${
                 aba === a.id
                   ? "border-primary bg-primary text-primary-foreground"
                   : "border-border bg-card"
@@ -368,7 +368,7 @@ function PainelPage() {
         {aba === "caixa" && (
           <>
             <div className="flex items-center justify-between gap-3">
-              <h1 className="text-3xl font-extrabold">Caixa</h1>
+              <h1 className="text-3xl font-bold">Caixa</h1>
               <button
                 onClick={() => setLancando(true)}
                 className="btn-base bg-accent text-accent-foreground"
@@ -379,7 +379,7 @@ function PainelPage() {
 
             {contasAbertas.length > 0 && (
               <section className="mt-5">
-                <h2 className="text-2xl font-extrabold">Contas abertas</h2>
+                <h2 className="text-2xl font-bold">Contas abertas</h2>
                 <p className="text-base text-muted-foreground">
                   Mesas que vão pagar no final. De olho na saída 👀
                 </p>
@@ -387,8 +387,8 @@ function PainelPage() {
                   {contasAbertas.map((c) => (
                     <article key={c.mesa.id} className="card-praia border-accent p-4">
                       <div className="flex items-baseline justify-between gap-2">
-                        <h3 className="text-2xl font-extrabold">Mesa {c.mesa.numero}</h3>
-                        <span className="text-2xl font-extrabold">{formatarReal(c.emAberto)}</span>
+                        <h3 className="text-2xl font-bold">Mesa {c.mesa.numero}</h3>
+                        <span className="text-2xl font-bold">{formatarReal(c.emAberto)}</span>
                       </div>
                       <p className="text-base text-muted-foreground">
                         na conta desde {c.contaDesde ? horaCurta(c.contaDesde) : "—"}
@@ -397,7 +397,7 @@ function PainelPage() {
                           : ""}
                       </p>
                       {c.fechamentoSolicitado && (
-                        <p className="mt-2 rounded-xl bg-success/15 p-2 text-lg font-bold">
+                        <p className="mt-2 rounded-xl bg-success/15 p-2 text-lg font-semibold">
                           Avisou que pagou no Pix. Confere no banco 👍
                         </p>
                       )}
@@ -413,7 +413,7 @@ function PainelPage() {
               </section>
             )}
 
-            <h2 className="mt-6 text-2xl font-extrabold">Aguardando pagamento</h2>
+            <h2 className="mt-6 text-2xl font-bold">Aguardando pagamento</h2>
             <p className="mt-1 text-base text-muted-foreground">
               {pendentesCaixa.length} pedido(s). Depois de 10 minutos o pedido expira sozinho.
             </p>
@@ -425,28 +425,28 @@ function PainelPage() {
                   className={`card-praia p-4 ${p.na_conta ? "border-accent" : ""}`}
                 >
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
-                    <h2 className="flex flex-wrap items-center gap-2 text-2xl font-extrabold">
+                    <h2 className="flex flex-wrap items-center gap-2 text-2xl font-bold">
                       Mesa {nomeMesa(p.mesa_id)}
                       {p.na_conta ? (
-                        <span className="rounded-full bg-accent px-3 py-1 text-sm font-extrabold text-accent-foreground">
+                        <span className="rounded-full bg-accent px-3 py-1 text-sm font-bold text-accent-foreground">
                           quer abrir conta
                         </span>
                       ) : (
                         <MarcadorGrupo novo={abreGrupo(p, pedidos, liberacoes)} />
                       )}
                       {!p.na_conta && p.forma_pagamento === "cartao" && (
-                        <span className="rounded-full bg-accent px-3 py-1 text-sm font-extrabold text-accent-foreground">
+                        <span className="rounded-full bg-accent px-3 py-1 text-sm font-bold text-accent-foreground">
                           aguardando cartão
                         </span>
                       )}
                       {!p.na_conta &&
                         p.forma_pagamento === "pix" &&
                         (p.fechamento_solicitado_em ? (
-                          <span className="rounded-full bg-success px-3 py-1 text-sm font-extrabold text-success-foreground">
+                          <span className="rounded-full bg-success px-3 py-1 text-sm font-bold text-success-foreground">
                             pagou no Pix · confira
                           </span>
                         ) : (
-                          <span className="rounded-full bg-primary px-3 py-1 text-sm font-extrabold text-primary-foreground">
+                          <span className="rounded-full bg-primary px-3 py-1 text-sm font-bold text-primary-foreground">
                             Pix
                           </span>
                         ))}
@@ -458,7 +458,7 @@ function PainelPage() {
                   <p className="mt-2 text-lg font-semibold">
                     {p.itens.map((i) => `${i.quantidade}× ${i.nome_produto}`).join(", ")}
                   </p>
-                  <p className="mt-2 text-xl font-extrabold">{formatarReal(p.total)}</p>
+                  <p className="mt-2 text-xl font-bold">{formatarReal(p.total)}</p>
                   {p.na_conta && (
                     <p className="mt-1 text-base text-muted-foreground">
                       Tem gente na Mesa {nomeMesa(p.mesa_id)}? Então é só abrir a conta.
@@ -475,7 +475,7 @@ function PainelPage() {
                         </button>
                         <button
                           onClick={() => recusarConta(p.id)}
-                          className="btn-base border-2 border-border bg-card"
+                          className="btn-base border border-border bg-card"
                         >
                           Recusar
                         </button>
@@ -492,7 +492,7 @@ function PainelPage() {
                         </button>
                         <button
                           onClick={() => encerrarPedido(p.id, "cancelado")}
-                          className="btn-base border-2 border-border bg-card"
+                          className="btn-base border border-border bg-card"
                         >
                           Cancelar
                         </button>
@@ -509,7 +509,7 @@ function PainelPage() {
 
             {servicosAReceber.length > 0 && (
               <section className="mt-6">
-                <h2 className="text-2xl font-extrabold">Serviço a receber</h2>
+                <h2 className="text-2xl font-bold">Serviço a receber</h2>
                 <p className="text-base text-muted-foreground">
                   Mesas que já pagaram o consumo e ainda não deixaram o serviço.
                 </p>
@@ -517,7 +517,7 @@ function PainelPage() {
                   {servicosAReceber.map((c) => (
                     <article key={c.mesa.id} className="card-praia flex items-center gap-3 p-4">
                       <div className="min-w-0 flex-1">
-                        <p className="text-xl font-extrabold">Mesa {c.mesa.numero}</p>
+                        <p className="text-xl font-bold">Mesa {c.mesa.numero}</p>
                         <p className="text-base text-muted-foreground">
                           consumo {formatarReal(c.consumo)} · serviço{" "}
                           <strong>{formatarReal(c.servicoPendente)}</strong>
@@ -539,14 +539,14 @@ function PainelPage() {
 
         {aba === "cozinha" && (
           <>
-            <h1 className="text-3xl font-extrabold">Cozinha</h1>
+            <h1 className="text-3xl font-bold">Cozinha</h1>
             <p className="mt-1 text-base text-muted-foreground">
               Só aparece aqui o que pode ser preparado: o que já foi pago e o que está na conta.
             </p>
 
             {prontas.length > 0 && (
               <section className="mt-4">
-                <h2 className="text-2xl font-extrabold">Prontos pra entregar</h2>
+                <h2 className="text-2xl font-bold">Prontos pra entregar</h2>
                 <div className="mt-3 grid gap-4">{prontas.map(cardRodada)}</div>
               </section>
             )}
@@ -568,7 +568,7 @@ function PainelPage() {
         {aba === "ajuda" && <AbaAjuda whatsapp={barraca.whatsapp_suporte} />}
 
         <div className="mt-8">
-          <Link to="/" className="btn-base border-2 border-border bg-card">
+          <Link to="/" className="btn-base border border-border bg-card">
             Voltar ao início
           </Link>
         </div>
@@ -640,17 +640,17 @@ function CardRodada({
       }`}
     >
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="flex flex-wrap items-center gap-2 text-2xl font-extrabold">
+        <h2 className="flex flex-wrap items-center gap-2 text-2xl font-bold">
           Mesa {rodada.numeroMesa}
           <MarcadorGrupo novo={grupoNovo} />
           {rodada.numero > 1 && (
-            <span className="rounded-full bg-primary px-3 py-1 text-sm font-extrabold text-primary-foreground">
+            <span className="rounded-full bg-primary px-3 py-1 text-sm font-bold text-primary-foreground">
               {rodada.numero}ª rodada
             </span>
           )}
         </h2>
         <span
-          className={`rounded-full px-3 py-1 text-sm font-extrabold ${
+          className={`rounded-full px-3 py-1 text-sm font-bold ${
             pronta
               ? "bg-success text-success-foreground"
               : rodada.emPreparo.length
@@ -669,7 +669,7 @@ function CardRodada({
       </div>
 
       {pronta && (
-        <p className="mt-2 text-lg font-extrabold">
+        <p className="mt-2 text-lg font-bold">
           Esperando o garçom há {esperaPronto} min
           {atrasado ? " — passou de 5 minutos!" : ""}
         </p>
@@ -677,7 +677,7 @@ function CardRodada({
 
       {emAlerta.length > 0 && novos.length > 0 && (
         <div className="mt-3 rounded-xl bg-accent p-3 text-accent-foreground">
-          <p className="text-lg font-extrabold">NOVOS ITENS</p>
+          <p className="text-lg font-bold">NOVOS ITENS</p>
           <p className="text-lg font-semibold">
             {itensNovos.map((i) => `${i.qtd}× ${i.nome}`).join(", ")}
           </p>
@@ -704,7 +704,7 @@ function CardRodada({
             {p.status === "pago" && aberta ? " · novo" : ""}
           </p>
         ))}
-        <p className="mt-1 text-lg font-extrabold text-foreground">Total {formatarReal(total)}</p>
+        <p className="mt-1 text-lg font-bold text-foreground">Total {formatarReal(total)}</p>
       </div>
 
       <div className="mt-3 flex flex-wrap gap-2">
@@ -760,10 +760,10 @@ function AbaMesas({
     const resumo = resumoDaMesa(pedidos, liberacoes, servicos, mesa.id, barraca.servico_percentual);
     return (
       <>
-        <button onClick={() => setAberta(null)} className="btn-base border-2 border-border bg-card">
+        <button onClick={() => setAberta(null)} className="btn-base border border-border bg-card">
           ← Voltar às mesas
         </button>
-        <h1 className="mt-3 text-3xl font-extrabold">Mesa {mesa.numero}</h1>
+        <h1 className="mt-3 text-3xl font-bold">Mesa {mesa.numero}</h1>
         <p className="mt-1 text-lg text-muted-foreground">
           {atual.inicio ? `Ocupada desde ${hora(atual.inicio)}` : "Livre no momento"}
         </p>
@@ -772,7 +772,7 @@ function AbaMesas({
           {atual.pedidos.map((p) => (
             <div key={p.id} className="card-praia p-4">
               <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <p className="text-xl font-extrabold">{hora(p.criado_em)}</p>
+                <p className="text-xl font-bold">{hora(p.criado_em)}</p>
                 <span className="text-base text-muted-foreground">
                   {p.status} · {p.forma_pagamento === "cartao" ? "cartão" : "Pix"} ·{" "}
                   {nomeGarcom(p.garcom_id)}
@@ -781,7 +781,7 @@ function AbaMesas({
               <p className="mt-1 text-lg font-semibold">
                 {p.itens.map((i) => `${i.quantidade}× ${i.nome_produto}`).join(", ")}
               </p>
-              <p className="mt-1 text-xl font-extrabold">{formatarReal(p.total)}</p>
+              <p className="mt-1 text-xl font-bold">{formatarReal(p.total)}</p>
             </div>
           ))}
           {atual.pedidos.length === 0 && (
@@ -789,14 +789,14 @@ function AbaMesas({
           )}
         </div>
 
-        <p className="mt-4 text-2xl font-extrabold">Total do grupo: {formatarReal(atual.total)}</p>
+        <p className="mt-4 text-2xl font-bold">Total do grupo: {formatarReal(atual.total)}</p>
         {(resumo.emAberto > 0 || resumo.servicoPendente > 0) && (
           <div className="card-praia mt-3 border-accent p-4">
             {resumo.emAberto > 0 && (
-              <p className="text-xl font-extrabold">Na conta: {formatarReal(resumo.emAberto)}</p>
+              <p className="text-xl font-bold">Na conta: {formatarReal(resumo.emAberto)}</p>
             )}
             {resumo.servicoPendente > 0 && (
-              <p className="text-lg font-bold">
+              <p className="text-lg font-semibold">
                 Serviço a receber: {formatarReal(resumo.servicoPendente)}
               </p>
             )}
@@ -826,13 +826,13 @@ function AbaMesas({
               return;
             void liberarMesa(mesa.id);
           }}
-          className="btn-base mt-3 border-2 border-border bg-card disabled:opacity-50"
+          className="btn-base mt-3 border border-border bg-card disabled:opacity-50"
         >
           Liberar mesa
         </button>
 
         <div className="mt-4 flex items-center gap-3">
-          <p className="flex-1 text-lg font-bold">Plaquinha com QR Code</p>
+          <p className="flex-1 text-lg font-semibold">Plaquinha com QR Code</p>
           <button
             onClick={() => alternarQrCodeMesa(mesa.id)}
             aria-pressed={mesa.tem_qrcode}
@@ -848,9 +848,7 @@ function AbaMesas({
 
         {anterioresDeHoje(anteriores).length > 0 && (
           <section className="mt-6">
-            <h2 className="text-xl font-extrabold text-muted-foreground">
-              Grupos anteriores de hoje
-            </h2>
+            <h2 className="text-xl font-bold text-muted-foreground">Grupos anteriores de hoje</h2>
             <div className="mt-2 grid gap-2">
               {anterioresDeHoje(anteriores).map((g, i) => (
                 <p key={i} className="text-lg text-muted-foreground">
@@ -867,7 +865,7 @@ function AbaMesas({
 
   return (
     <>
-      <h1 className="text-3xl font-extrabold">Mesas</h1>
+      <h1 className="text-3xl font-bold">Mesas</h1>
       <p className="mt-1 text-base text-muted-foreground">
         Toque numa mesa para ver o consumo do grupo e liberar a mesa.
       </p>
@@ -900,14 +898,14 @@ function AbaMesas({
                 }`}
               >
                 <div className="min-w-0 flex-1">
-                  <p className="text-xl font-extrabold">Mesa {m.numero}</p>
+                  <p className="text-xl font-bold">Mesa {m.numero}</p>
                   <p className="text-base text-muted-foreground">
                     {ocupada
                       ? `Ocupada desde ${hora(atual.inicio!)} · ${formatarReal(atual.total)}`
                       : "Livre"}
                   </p>
                   {conta.emAberto > 0 && (
-                    <p className="text-base font-extrabold text-accent-foreground">
+                    <p className="text-base font-bold text-accent-foreground">
                       <span className="rounded-full bg-accent px-2 py-0.5">
                         conta aberta {formatarReal(conta.emAberto)}
                       </span>
@@ -915,7 +913,7 @@ function AbaMesas({
                   )}
                 </div>
                 <span
-                  className={`rounded-full px-3 py-1 text-sm font-extrabold ${
+                  className={`rounded-full px-3 py-1 text-sm font-bold ${
                     m.tem_qrcode
                       ? "bg-primary text-primary-foreground"
                       : "bg-muted text-muted-foreground"
@@ -967,13 +965,13 @@ function AbaHistorico() {
 
   return (
     <>
-      <h1 className="text-3xl font-extrabold">Histórico</h1>
+      <h1 className="text-3xl font-bold">Histórico</h1>
 
       {historico.carregando && (
-        <p className="mt-2 text-lg font-bold text-muted-foreground">Carregando…</p>
+        <p className="mt-2 text-lg font-semibold text-muted-foreground">Carregando…</p>
       )}
       {historico.erro && (
-        <p className="mt-2 text-lg font-bold text-destructive">
+        <p className="mt-2 text-lg font-semibold text-destructive">
           Não deu para carregar. Confira a internet e abra a aba de novo.
         </p>
       )}
@@ -989,7 +987,7 @@ function AbaHistorico() {
           <button
             key={id}
             onClick={() => setPeriodo(id)}
-            className={`btn-base border-2 ${
+            className={`btn-base border ${
               periodo === id
                 ? "border-primary bg-primary text-primary-foreground"
                 : "border-border bg-card"
@@ -1006,7 +1004,7 @@ function AbaHistorico() {
             key={id}
             onClick={() => alternar(id)}
             aria-pressed={status.includes(id)}
-            className={`btn-base border-2 ${
+            className={`btn-base border ${
               status.includes(id)
                 ? "border-accent bg-accent text-accent-foreground"
                 : "border-border bg-card"
@@ -1021,14 +1019,14 @@ function AbaHistorico() {
         {lista.map((p) => (
           <article key={p.id} className="card-praia p-4">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <h2 className="text-xl font-extrabold">
+              <h2 className="text-xl font-bold">
                 {new Date(p.criado_em).toLocaleTimeString("pt-BR", {
                   hour: "2-digit",
                   minute: "2-digit",
                 })}{" "}
                 · Mesa {nomeMesa(p.mesa_id)}
               </h2>
-              <span className="rounded-full bg-muted px-3 py-1 text-sm font-extrabold text-muted-foreground">
+              <span className="rounded-full bg-muted px-3 py-1 text-sm font-bold text-muted-foreground">
                 {rotulos[p.status] ?? p.status}
               </span>
             </div>
@@ -1038,7 +1036,7 @@ function AbaHistorico() {
             <p className="mt-1 text-base text-muted-foreground">
               Garçom: {nomeGarcom(p.garcom_id)}
             </p>
-            <p className="mt-1 text-xl font-extrabold">{formatarReal(p.total)}</p>
+            <p className="mt-1 text-xl font-bold">{formatarReal(p.total)}</p>
           </article>
         ))}
         {lista.length === 0 && (
@@ -1047,8 +1045,8 @@ function AbaHistorico() {
       </div>
 
       <div className="card-praia mt-4 flex flex-wrap justify-between gap-3 p-4 text-lg">
-        <span className="font-bold">{lista.length} pedido(s)</span>
-        <span className="font-extrabold">{formatarReal(totalValor)}</span>
+        <span className="font-semibold">{lista.length} pedido(s)</span>
+        <span className="font-bold">{formatarReal(totalValor)}</span>
       </div>
     </>
   );
@@ -1063,10 +1061,17 @@ interface ResumoGrupo {
   porMesa: number;
   pix: number;
   cartao: number;
+  dinheiro: number;
+  /** custo dos itens vendidos que têm custo cadastrado */
+  custo: number;
+  /** quanto esses mesmos itens renderam */
+  receitaComCusto: number;
+  /** unidades vendidas sem custo cadastrado */
+  unidadesSemCusto: number;
 }
 
 function AbaResultados() {
-  const { mesas, garcons, barraca } = useDados();
+  const { mesas, garcons, barraca, produtos } = useDados();
   const [dias, setDias] = useState(7);
   const historico = useHistorico(dias);
   const pedidos = historico.pedidos;
@@ -1089,6 +1094,21 @@ function AbaResultados() {
     }))
     .filter((x) => x.total > 0 || x.nome !== "Equipe (sem nome)");
 
+  const custos = (l: Pedido[]) => {
+    let custo = 0;
+    let receitaComCusto = 0;
+    let unidadesSemCusto = 0;
+    for (const p of l)
+      for (const i of p.itens) {
+        if (i.custo == null) unidadesSemCusto += i.quantidade;
+        else {
+          custo += i.custo * i.quantidade;
+          receitaComCusto += i.preco * i.quantidade;
+        }
+      }
+    return { custo, receitaComCusto, unidadesSemCusto };
+  };
+
   const resumo = (lista: Pedido[]) => {
     // Todos os números consideram apenas pedidos pagos.
     const pagos = lista.filter((p) => p.pago);
@@ -1100,7 +1120,7 @@ function AbaResultados() {
     }
     const calc = (l: Pedido[], totalMesas: number): ResumoGrupo => {
       const faturamento = l.reduce((s, p) => s + p.total - p.gorjeta, 0);
-      const soma = (forma: "pix" | "cartao") =>
+      const soma = (forma: "pix" | "cartao" | "dinheiro") =>
         l.filter((p) => p.forma_pagamento === forma).reduce((s, p) => s + p.total - p.gorjeta, 0);
       return {
         pedidos: l.length,
@@ -1111,6 +1131,8 @@ function AbaResultados() {
         porMesa: totalMesas ? faturamento / totalMesas : 0,
         pix: soma("pix"),
         cartao: soma("cartao"),
+        dinheiro: soma("dinheiro"),
+        ...custos(l),
       };
     };
     const mesasComQr = mesas.filter((m) => m.tem_qrcode).length;
@@ -1186,76 +1208,196 @@ function AbaResultados() {
     URL.revokeObjectURL(url);
   }
 
-  return (
-    <>
-      <h1 className="text-3xl font-extrabold">Resultados</h1>
+  const servicoHoje = historico.servicos
+    .filter((x) => new Date(x.criado_em).toDateString() === hoje)
+    .reduce((s, x) => s + x.valor, 0);
+  const caixinhaHoje = doDia.filter((p) => p.pago).reduce((s, p) => s + p.gorjeta, 0);
 
-      {historico.carregando && (
-        <p className="mt-2 text-lg font-bold text-muted-foreground">Carregando…</p>
-      )}
-      {historico.erro && (
-        <p className="mt-2 text-lg font-bold text-destructive">
-          Não deu para carregar. Confira a internet e abra a aba de novo.
-        </p>
-      )}
+  // lucro por item no período (só itens com custo cadastrado)
+  const porItem = new Map<string, { nome: string; qtd: number; receita: number; custo: number }>();
+  for (const p of doPeriodo.filter((x) => x.pago))
+    for (const i of p.itens) {
+      if (i.custo == null) continue;
+      const chave = i.produto_id || i.nome_produto;
+      const nome =
+        produtos.find((x) => x.id === i.produto_id)?.nome ?? i.nome_produto.split(" (")[0] ?? "";
+      const a = porItem.get(chave) ?? { nome, qtd: 0, receita: 0, custo: 0 };
+      a.qtd += i.quantidade;
+      a.receita += i.preco * i.quantidade;
+      a.custo += i.custo * i.quantidade;
+      porItem.set(chave, a);
+    }
+  const rankingLucro = [...porItem.values()]
+    .map((x) => ({ ...x, lucro: x.receita - x.custo }))
+    .sort((a, b) => b.lucro - a.lucro);
+  const temCusto = produtos.some((x) => x.custo != null);
+
+  return (
+    <div className="grid gap-8">
+      <header>
+        <h1 className="text-3xl font-bold">Resultados</h1>
+        {historico.carregando && <p className="mt-2 text-muted-foreground">Carregando…</p>}
+        {historico.erro && (
+          <p className="mt-2 text-destructive">
+            Não deu para carregar. Confira a internet e abra a aba de novo.
+          </p>
+        )}
+      </header>
+
+      <section>
+        <h2 className="text-xl font-semibold">Fechamento de hoje</h2>
+        <p className="mt-1 text-muted-foreground">Confira cada valor antes de ir embora.</p>
+        <Quadro>
+          <Linha rotulo="📲 Pix" dica="confira no app do banco" valor={rDia.total.pix} />
+          <Linha rotulo="💳 Cartão" dica="confira na maquininha" valor={rDia.total.cartao} />
+          <Linha rotulo="💵 Dinheiro" dica="confira no caixa" valor={rDia.total.dinheiro} />
+          <Linha rotulo="Total vendido" valor={rDia.total.faturamento} forte />
+        </Quadro>
+        {(servicoHoje > 0 || caixinhaHoje > 0 || aReceber > 0) && (
+          <Quadro>
+            {servicoHoje > 0 && (
+              <Linha rotulo="Serviço dos garçons" dica="não entra no total" valor={servicoHoje} />
+            )}
+            {caixinhaHoje > 0 && (
+              <Linha rotulo="Caixinha dos garçons" dica="não entra no total" valor={caixinhaHoje} />
+            )}
+            {aReceber > 0 && (
+              <Linha rotulo="A receber" dica="contas ainda abertas" valor={aReceber} />
+            )}
+          </Quadro>
+        )}
+      </section>
 
       <Bloco titulo="Hoje" r={rDia} />
 
-      <div className="mt-6 flex flex-wrap items-center gap-2">
-        <span className="text-lg font-bold">Período:</span>
-        {[7, 30, 90].map((d) => (
-          <button
-            key={d}
-            onClick={() => setDias(d)}
-            className={`btn-base border-2 ${
-              dias === d
-                ? "border-primary bg-primary text-primary-foreground"
-                : "border-border bg-card"
-            }`}
-          >
-            {d} dias
-          </button>
-        ))}
-      </div>
+      <section>
+        <div className="flex flex-wrap items-center gap-2">
+          <h2 className="mr-2 text-xl font-semibold">Período</h2>
+          {[7, 30, 90].map((d) => (
+            <button
+              key={d}
+              onClick={() => setDias(d)}
+              className={`rounded-full border px-4 py-1.5 font-semibold ${
+                dias === d
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-border bg-card"
+              }`}
+            >
+              {d} dias
+            </button>
+          ))}
+        </div>
+      </section>
       <Bloco titulo={`Últimos ${dias} dias`} r={rPeriodo} />
 
-      {aReceber > 0 && (
-        <p className="card-praia mt-4 border-accent p-4 text-lg font-bold">
-          A receber (contas abertas): {formatarReal(aReceber)}
-        </p>
-      )}
+      <section>
+        <h2 className="text-xl font-semibold">Lucro estimado · últimos {dias} dias</h2>
+        {!temCusto ? (
+          <p className="mt-2 text-muted-foreground">
+            Cadastre o custo dos itens na aba Cardápio (campo “Custo R$”) para ver quanto sobra de
+            cada venda.
+          </p>
+        ) : (
+          <>
+            <Quadro>
+              <Linha rotulo="Vendido (itens com custo)" valor={rPeriodo.total.receitaComCusto} />
+              <Linha rotulo="Custo desses itens" valor={rPeriodo.total.custo} />
+              <Linha
+                rotulo="Sobra (lucro bruto)"
+                dica={
+                  rPeriodo.total.receitaComCusto > 0
+                    ? `margem de ${Math.round(((rPeriodo.total.receitaComCusto - rPeriodo.total.custo) / rPeriodo.total.receitaComCusto) * 100)}%`
+                    : undefined
+                }
+                valor={rPeriodo.total.receitaComCusto - rPeriodo.total.custo}
+                forte
+              />
+            </Quadro>
+            {rPeriodo.total.unidadesSemCusto > 0 && (
+              <p className="mt-2 text-sm text-muted-foreground">
+                {rPeriodo.total.unidadesSemCusto} unidade(s) vendida(s) sem custo cadastrado ficaram
+                de fora desta conta.
+              </p>
+            )}
+            {rankingLucro.length > 0 && (
+              <>
+                <h3 className="mt-5 font-semibold">O que mais deixou lucro</h3>
+                <Quadro>
+                  {rankingLucro.slice(0, 10).map((x) => (
+                    <Linha
+                      key={x.nome}
+                      rotulo={x.nome}
+                      dica={`${x.qtd} vendido(s) · margem ${x.receita > 0 ? Math.round((x.lucro / x.receita) * 100) : 0}%`}
+                      valor={x.lucro}
+                    />
+                  ))}
+                </Quadro>
+              </>
+            )}
+            <p className="mt-2 text-sm text-muted-foreground">
+              Estimativa: usa o custo cadastrado do item na hora da venda. Acréscimos de escolhas
+              (ex.: vodka) entram só no preço.
+            </p>
+          </>
+        )}
+      </section>
 
       {barraca.servico_percentual > 0 && (
-        <>
-          <h2 className="mt-6 text-2xl font-extrabold">Serviço por garçom</h2>
-          <div className="card-praia mt-3 divide-y-2 divide-border p-4 text-lg">
+        <section>
+          <h2 className="text-xl font-semibold">Serviço por garçom · {dias} dias</h2>
+          <Quadro>
             {servicoPorGarcom.map((c) => (
-              <div key={c.nome} className="flex justify-between py-2">
-                <span className="font-semibold">{c.nome}</span>
-                <span className="font-extrabold">{formatarReal(c.total)}</span>
-              </div>
+              <Linha key={c.nome} rotulo={c.nome} valor={c.total} />
             ))}
-          </div>
-        </>
+          </Quadro>
+        </section>
       )}
 
-      <h2 className="mt-6 text-2xl font-extrabold">Caixinha por garçom</h2>
-      <div className="card-praia mt-3 divide-y-2 divide-border p-4 text-lg">
-        {caixinhas.map((c) => (
-          <div key={c.nome} className="flex justify-between py-2">
-            <span className="font-semibold">{c.nome}</span>
-            <span className="font-extrabold">{formatarReal(c.total)}</span>
-          </div>
-        ))}
-      </div>
+      <section>
+        <h2 className="text-xl font-semibold">Caixinha por garçom · {dias} dias</h2>
+        <Quadro>
+          {caixinhas.map((c) => (
+            <Linha key={c.nome} rotulo={c.nome} valor={c.total} />
+          ))}
+        </Quadro>
+      </section>
 
-      <button
-        onClick={exportarCsv}
-        className="btn-base mt-5 w-full bg-accent text-accent-foreground"
-      >
-        Exportar CSV do período
+      <button onClick={exportarCsv} className="btn-base w-full border border-border bg-card">
+        Baixar planilha do período (CSV)
       </button>
-    </>
+    </div>
+  );
+}
+
+/** Caixa leve para listas de valores. */
+function Quadro({ children }: { children: ReactNode }) {
+  return <div className="mt-3 rounded-2xl border border-border bg-card px-4 py-1">{children}</div>;
+}
+
+/** Uma linha "rótulo ........ valor", com dica opcional em cinza. */
+function Linha({
+  rotulo,
+  dica,
+  valor,
+  forte,
+}: {
+  rotulo: string;
+  dica?: string | undefined;
+  valor: number;
+  forte?: boolean;
+}) {
+  return (
+    <div className="flex items-baseline justify-between gap-3 border-b border-border/60 py-3 last:border-0">
+      <span className={forte ? "font-semibold" : ""}>
+        {rotulo}
+        {dica && <span className="block text-sm text-muted-foreground">{dica}</span>}
+      </span>
+      <span
+        className={`whitespace-nowrap tabular-nums ${forte ? "text-xl font-bold" : "font-semibold"}`}
+      >
+        {formatarReal(valor)}
+      </span>
+    </div>
   );
 }
 
@@ -1266,52 +1408,48 @@ function Bloco({
   titulo: string;
   r: { comQr: ResumoGrupo; semQr: ResumoGrupo; total: ResumoGrupo };
 }) {
-  const Linha = ({ rotulo, v, porMesa }: { rotulo: string; v: ResumoGrupo; porMesa?: boolean }) => (
-    <div className="card-praia p-4">
-      <p className="text-lg font-extrabold">{rotulo}</p>
-      <div className="mt-1 flex flex-wrap gap-x-6 text-lg">
-        <span>
-          Pedidos <strong>{v.pedidos}</strong>
-        </span>
-        <span>
-          Faturamento <strong>{formatarReal(v.faturamento)}</strong>
-        </span>
-        <span>
-          Média por pedido <strong>{formatarReal(v.ticket)}</strong>
-        </span>
-        <span>
-          Pix <strong>{formatarReal(v.pix)}</strong>
-        </span>
-        <span>
-          Cartão <strong>{formatarReal(v.cartao)}</strong>
-        </span>
+  const Cartao = ({
+    rotulo,
+    v,
+    porMesa,
+  }: {
+    rotulo: string;
+    v: ResumoGrupo;
+    porMesa?: boolean;
+  }) => (
+    <div className="rounded-2xl border border-border bg-card p-4">
+      <p className="font-semibold">{rotulo}</p>
+      <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-3">
+        <Dado nome="Pedidos" valor={String(v.pedidos)} />
+        <Dado nome="Faturamento" valor={formatarReal(v.faturamento)} />
+        <Dado nome="Média por pedido" valor={formatarReal(v.ticket)} />
         {porMesa && (
           <>
-            <span>
-              Mesas <strong>{v.mesas}</strong>
-            </span>
-            <span>
-              Mesas que pediram{" "}
-              <strong>
-                {v.mesasQuePediram} de {v.mesas}
-              </strong>
-            </span>
-            <span>
-              Média por mesa <strong>{formatarReal(v.porMesa)}</strong>
-            </span>
+            <Dado nome="Mesas que pediram" valor={`${v.mesasQuePediram} de ${v.mesas}`} />
+            <Dado nome="Média por mesa" valor={formatarReal(v.porMesa)} />
           </>
         )}
-      </div>
+      </dl>
     </div>
   );
-
   return (
-    <section className="mt-4 grid gap-3">
-      <h2 className="text-2xl font-extrabold">{titulo}</h2>
-      <Linha rotulo="Total da barraca" v={r.total} />
-      <Linha rotulo="Mesas com QR Code" v={r.comQr} porMesa />
-      <Linha rotulo="Mesas sem QR Code" v={r.semQr} porMesa />
+    <section className="grid gap-3">
+      <h2 className="text-xl font-semibold">{titulo}</h2>
+      <Cartao rotulo="Total da barraca" v={r.total} />
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Cartao rotulo="Mesas com QR Code" v={r.comQr} porMesa />
+        <Cartao rotulo="Mesas sem QR Code" v={r.semQr} porMesa />
+      </div>
     </section>
+  );
+}
+
+function Dado({ nome, valor }: { nome: string; valor: string }) {
+  return (
+    <div>
+      <dt className="text-sm text-muted-foreground">{nome}</dt>
+      <dd className="font-semibold tabular-nums">{valor}</dd>
+    </div>
   );
 }
 
@@ -1337,20 +1475,20 @@ function LancarPedido({ aoFechar }: { aoFechar: () => void }) {
     <div className="fixed inset-0 z-50 flex flex-col bg-background">
       <div className="border-b-2 border-border bg-card px-4 py-3">
         <div className="mx-auto flex max-w-3xl items-center justify-between">
-          <h2 className="text-2xl font-extrabold">Lançar pedido</h2>
-          <button onClick={aoFechar} className="btn-base border-2 border-border">
+          <h2 className="text-2xl font-bold">Lançar pedido</h2>
+          <button onClick={aoFechar} className="btn-base border border-border">
             Fechar
           </button>
         </div>
       </div>
 
       <div className="mx-auto w-full max-w-3xl flex-1 overflow-y-auto px-4 py-4">
-        <label className="block text-lg font-bold">
+        <label className="block text-lg font-semibold">
           Mesa
           <select
             value={mesaId}
             onChange={(e) => setMesaId(e.target.value)}
-            className="mt-1 w-full rounded-xl border-2 border-border bg-card px-3 py-3 text-lg font-bold"
+            className="mt-1 w-full rounded-xl border border-border bg-card px-3 py-3 text-lg font-semibold"
           >
             {[...mesas]
               .sort((a, b) => a.numero - b.numero)
@@ -1362,12 +1500,12 @@ function LancarPedido({ aoFechar }: { aoFechar: () => void }) {
           </select>
         </label>
 
-        <label className="mt-4 block text-lg font-bold">
+        <label className="mt-4 block text-lg font-semibold">
           Garçom
           <select
             value={garcomId}
             onChange={(e) => setGarcomId(e.target.value)}
-            className="mt-1 w-full rounded-xl border-2 border-border bg-card px-3 py-3 text-lg font-bold"
+            className="mt-1 w-full rounded-xl border border-border bg-card px-3 py-3 text-lg font-semibold"
           >
             {garcons.map((g) => (
               <option key={g.id} value={g.id}>
@@ -1377,7 +1515,7 @@ function LancarPedido({ aoFechar }: { aoFechar: () => void }) {
           </select>
         </label>
 
-        <p className="mt-4 text-lg font-bold">Pagamento</p>
+        <p className="mt-4 text-lg font-semibold">Pagamento</p>
         <div className="mt-1 grid grid-cols-3 gap-2">
           {(
             [
@@ -1389,7 +1527,7 @@ function LancarPedido({ aoFechar }: { aoFechar: () => void }) {
             <button
               key={id}
               onClick={() => setForma(id)}
-              className={`btn-base border-2 ${
+              className={`btn-base border ${
                 forma === id
                   ? "border-primary bg-primary text-primary-foreground"
                   : "border-border bg-card"
@@ -1405,7 +1543,7 @@ function LancarPedido({ aoFechar }: { aoFechar: () => void }) {
 
       <div className="border-t-2 border-border bg-card px-4 py-4">
         <div className="mx-auto flex max-w-3xl items-center gap-3">
-          <span className="flex-1 text-2xl font-extrabold">{formatarReal(total)}</span>
+          <span className="flex-1 text-2xl font-bold">{formatarReal(total)}</span>
           <button
             disabled={linhas.length === 0 || enviando}
             onClick={async () => {
@@ -1416,7 +1554,12 @@ function LancarPedido({ aoFechar }: { aoFechar: () => void }) {
                 origem: "garcom",
                 gorjeta: 0,
                 forma_pagamento: forma,
-                linhas: carrinho.linhas.map((l) => ({ produto: l.produto, quantidade: l.quantidade, escolhas: l.escolhas, obs: l.obs })),
+                linhas: carrinho.linhas.map((l) => ({
+                  produto: l.produto,
+                  quantidade: l.quantidade,
+                  escolhas: l.escolhas,
+                  obs: l.obs,
+                })),
               });
               setEnviando(false);
               const aviso = avisoDoPedido(r);
@@ -1476,7 +1619,7 @@ function AbaAjuda({ whatsapp }: { whatsapp: string }) {
 
   return (
     <section>
-      <h1 className="text-3xl font-extrabold">Ajuda</h1>
+      <h1 className="text-3xl font-bold">Ajuda</h1>
       <p className="mt-1 text-base text-muted-foreground">Toque na pergunta para ver a resposta.</p>
 
       <div className="mt-4 grid gap-3">
@@ -1485,7 +1628,7 @@ function AbaAjuda({ whatsapp }: { whatsapp: string }) {
             <button
               onClick={() => setAberta(aberta === i ? null : i)}
               aria-expanded={aberta === i}
-              className="flex w-full items-center justify-between gap-3 text-left text-xl font-extrabold"
+              className="flex w-full items-center justify-between gap-3 text-left text-xl font-bold"
             >
               {pergunta}
               <span aria-hidden>{aberta === i ? "−" : "+"}</span>
@@ -1558,8 +1701,8 @@ function FecharMesa({ mesaId, aoFechar }: { mesaId: string; aoFechar: () => void
     <div className="fixed inset-0 z-50 flex flex-col bg-background">
       <div className="border-b-2 border-border bg-card px-4 py-3">
         <div className="mx-auto flex max-w-3xl items-center justify-between">
-          <h2 className="text-2xl font-extrabold">Mesa {mesa?.numero ?? "?"}</h2>
-          <button onClick={aoFechar} className="btn-base border-2 border-border">
+          <h2 className="text-2xl font-bold">Mesa {mesa?.numero ?? "?"}</h2>
+          <button onClick={aoFechar} className="btn-base border border-border">
             Fechar
           </button>
         </div>
@@ -1568,18 +1711,18 @@ function FecharMesa({ mesaId, aoFechar }: { mesaId: string; aoFechar: () => void
       <div className="mx-auto w-full max-w-3xl flex-1 overflow-y-auto px-4 py-4">
         {r.emAberto > 0 && (
           <section className="card-praia p-4">
-            <h3 className="text-2xl font-extrabold">Conta: {formatarReal(r.emAberto)}</h3>
+            <h3 className="text-2xl font-bold">Conta: {formatarReal(r.emAberto)}</h3>
             <p className="mt-1 text-lg">
               {[...itens].map(([nome, q]) => `${q}× ${nome}`).join(", ")}
             </p>
             {r.fechamentoSolicitado && (
-              <p className="mt-2 rounded-xl bg-success/15 p-2 text-lg font-bold">
+              <p className="mt-2 rounded-xl bg-success/15 p-2 text-lg font-semibold">
                 O cliente avisou que pagou no Pix. Confere no banco 👍
               </p>
             )}
             <button
               onClick={() => setMostrarQrConta((v) => !v)}
-              className="mt-3 text-base font-bold text-muted-foreground underline"
+              className="mt-3 text-base font-semibold text-muted-foreground underline"
             >
               {mostrarQrConta ? "Esconder QR do Pix" : "Mostrar QR do Pix pro cliente"}
             </button>
@@ -1595,7 +1738,7 @@ function FecharMesa({ mesaId, aoFechar }: { mesaId: string; aoFechar: () => void
                 />
               </div>
             )}
-            <p className="mt-4 text-lg font-bold">Recebeu? Toca em como foi:</p>
+            <p className="mt-4 text-lg font-semibold">Recebeu? Toca em como foi:</p>
             <div className="mt-2 grid grid-cols-3 gap-2">
               {FORMAS_RECEBIMENTO.map(([forma, rotulo, cor]) => (
                 <button
@@ -1613,17 +1756,17 @@ function FecharMesa({ mesaId, aoFechar }: { mesaId: string; aoFechar: () => void
 
         {r.servicoPendente > 0 && (
           <section className="card-praia mt-4 p-4">
-            <h3 className="text-2xl font-extrabold">Serviço: {formatarReal(r.servicoPendente)}</h3>
+            <h3 className="text-2xl font-bold">Serviço: {formatarReal(r.servicoPendente)}</h3>
             <p className="mt-1 text-base text-muted-foreground">
               {barraca.servico_percentual}% de {formatarReal(r.consumo)} · opcional para o cliente
             </p>
-            <p className="mt-3 text-lg font-bold">Quem atendeu?</p>
+            <p className="mt-3 text-lg font-semibold">Quem atendeu?</p>
             <div className="mt-2 flex flex-wrap gap-2">
               {[...garcons, { id: "equipe", nome: "Equipe", chave_pix: "" }].map((g) => (
                 <button
                   key={g.id}
                   onClick={() => setGarcomId(g.id)}
-                  className={`btn-base border-2 ${
+                  className={`btn-base border ${
                     garcomId === g.id
                       ? "border-primary bg-primary text-primary-foreground"
                       : "border-border bg-card"
@@ -1637,7 +1780,7 @@ function FecharMesa({ mesaId, aoFechar }: { mesaId: string; aoFechar: () => void
               <>
                 <button
                   onClick={() => setMostrarQrServico((v) => !v)}
-                  className="mt-3 text-base font-bold text-muted-foreground underline"
+                  className="mt-3 text-base font-semibold text-muted-foreground underline"
                 >
                   {mostrarQrServico ? "Esconder QR" : `Mostrar QR do Pix de ${garcom.nome}`}
                 </button>
@@ -1655,7 +1798,7 @@ function FecharMesa({ mesaId, aoFechar }: { mesaId: string; aoFechar: () => void
                 )}
               </>
             )}
-            <p className="mt-4 text-lg font-bold">
+            <p className="mt-4 text-lg font-semibold">
               {garcomId
                 ? "Recebeu o serviço? Toca em como foi:"
                 : "Primeiro, toca em quem atendeu."}
@@ -1685,7 +1828,7 @@ function FecharMesa({ mesaId, aoFechar }: { mesaId: string; aoFechar: () => void
         )}
 
         {r.emAberto === 0 && r.servicoPendente === 0 && (
-          <p className="card-praia p-4 text-xl font-bold">Tudo pago por aqui 🌊</p>
+          <p className="card-praia p-4 text-xl font-semibold">Tudo pago por aqui 🌊</p>
         )}
       </div>
     </div>

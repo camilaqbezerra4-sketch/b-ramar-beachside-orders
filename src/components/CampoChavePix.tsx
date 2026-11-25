@@ -23,11 +23,11 @@ export function CampoChavePix({
         aria-label={rotulo}
         className={
           className ??
-          "w-full rounded-xl border-2 border-border bg-background px-3 py-3 text-lg font-bold"
+          "w-full rounded-xl border border-border bg-background px-3 py-3 text-lg font-semibold"
         }
       />
       {info.ok ? (
-        <p className="text-base font-bold text-muted-foreground">
+        <p className="text-base font-semibold text-muted-foreground">
           {info.rotulo}: <span className="text-foreground">{info.valor}</span>
         </p>
       ) : info.vazia ? (
@@ -35,7 +35,7 @@ export function CampoChavePix({
           Telefone, CPF, CNPJ, e-mail ou chave aleatória.
         </p>
       ) : (
-        <p className="text-base font-bold text-destructive">
+        <p className="text-base font-semibold text-destructive">
           Não reconhecemos esta chave Pix. Confira o número ou o e-mail.
         </p>
       )}

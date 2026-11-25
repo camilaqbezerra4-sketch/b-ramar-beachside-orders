@@ -65,11 +65,11 @@ function AdminPage() {
         <AppHeader subtitulo="Administração" />
         {erroCarga ? (
           <div className="mx-auto max-w-3xl px-4 pt-8">
-            <p className="text-xl font-bold">Não foi possível abrir a administração.</p>
+            <p className="text-xl font-semibold">Não foi possível abrir a administração.</p>
             <p className="mt-2 text-muted-foreground">{erroCarga}</p>
           </div>
         ) : (
-          <p className="mx-auto max-w-3xl px-4 pt-8 text-xl font-bold">Carregando…</p>
+          <p className="mx-auto max-w-3xl px-4 pt-8 text-xl font-semibold">Carregando…</p>
         )}
       </div>
     );
@@ -80,7 +80,7 @@ function AdminPage() {
       <div className="min-h-screen">
         <AppHeader subtitulo="Administração" />
         <main className="mx-auto max-w-3xl px-4 pt-8">
-          <h1 className="text-3xl font-extrabold">Área de administração</h1>
+          <h1 className="text-3xl font-bold">Área de administração</h1>
           <form
             onSubmit={async (e) => {
               e.preventDefault();
@@ -102,11 +102,11 @@ function AdminPage() {
               }}
               aria-label="Senha da administração"
               placeholder="Senha"
-              className="w-full rounded-2xl border-2 border-border bg-card px-4 py-4 text-xl font-bold"
+              className="w-full rounded-2xl border border-border bg-card px-4 py-4 text-xl font-semibold"
             />
-            {erro && <p className="text-lg font-bold text-destructive">Senha incorreta.</p>}
+            {erro && <p className="text-lg font-semibold text-destructive">Senha incorreta.</p>}
             <button className="btn-base bg-primary text-primary-foreground">Entrar</button>
-            <Link to="/" className="btn-base border-2 border-border bg-card">
+            <Link to="/" className="btn-base border border-border bg-card">
               Voltar ao início
             </Link>
           </form>
@@ -132,13 +132,13 @@ function AdminPage() {
       <AppHeader subtitulo="Administração" />
       <main className="mx-auto max-w-3xl px-4 pt-6">
         <div className="flex flex-wrap items-center gap-3">
-          <h1 className="flex-1 text-3xl font-extrabold">Barracas</h1>
+          <h1 className="flex-1 text-3xl font-bold">Barracas</h1>
           <button
             onClick={async () => {
               await sairAdmin();
               setLiberado(false);
             }}
-            className="btn-base border-2 border-border bg-card"
+            className="btn-base border border-border bg-card"
           >
             Sair
           </button>
@@ -148,12 +148,12 @@ function AdminPage() {
           {barracas.map((b) => (
             <article key={b.id} className="card-praia p-4">
               <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <h2 className="text-2xl font-extrabold">{b.nome}</h2>
+                <h2 className="text-2xl font-bold">{b.nome}</h2>
                 <span className="text-base text-muted-foreground">
                   /{b.slug} · {b.mesas} mesas · {b.cidade}
                 </span>
               </div>
-              {!b.ativa && <p className="mt-1 text-lg font-bold text-destructive">Desativada</p>}
+              {!b.ativa && <p className="mt-1 text-lg font-semibold text-destructive">Desativada</p>}
               <div className="mt-3 flex flex-wrap gap-2">
                 <button
                   onClick={() => setSelecionada(b)}
@@ -164,14 +164,14 @@ function AdminPage() {
                 <Link
                   to="/$slug/qrcodes"
                   params={{ slug: b.slug }}
-                  className="btn-base border-2 border-border bg-card"
+                  className="btn-base border border-border bg-card"
                 >
                   QR Codes
                 </Link>
                 <Link
                   to="/$slug/painel"
                   params={{ slug: b.slug }}
-                  className="btn-base border-2 border-border bg-card"
+                  className="btn-base border border-border bg-card"
                 >
                   Abrir painel
                 </Link>
@@ -182,7 +182,7 @@ function AdminPage() {
                     });
                     await recarregar();
                   }}
-                  className="btn-base border-2 border-border bg-card"
+                  className="btn-base border border-border bg-card"
                 >
                   {b.ativa ? "Desativar" : "Reativar"}
                 </button>
@@ -195,7 +195,7 @@ function AdminPage() {
         <NovaBarraca aoCriar={recarregar} />
 
         <div className="mt-8">
-          <Link to="/" className="btn-base border-2 border-border bg-card">
+          <Link to="/" className="btn-base border border-border bg-card">
             Voltar ao início
           </Link>
         </div>
@@ -216,11 +216,11 @@ function NovaBarraca({ aoCriar }: { aoCriar: () => Promise<void> }) {
   const [salvando, setSalvando] = useState(false);
 
   const campo =
-    "w-full rounded-xl border-2 border-border bg-background px-3 py-3 text-lg font-bold";
+    "w-full rounded-xl border border-border bg-background px-3 py-3 text-lg font-semibold";
 
   return (
     <section className="card-praia mt-8 grid gap-3 p-4">
-      <h2 className="text-2xl font-extrabold">Criar barraca</h2>
+      <h2 className="text-2xl font-bold">Criar barraca</h2>
       <input
         value={nome}
         onChange={(e) => {
@@ -273,7 +273,7 @@ function NovaBarraca({ aoCriar }: { aoCriar: () => Promise<void> }) {
         aria-label="Quantidade de mesas"
         className={campo}
       />
-      {erro && <p className="text-lg font-bold text-destructive">{erro}</p>}
+      {erro && <p className="text-lg font-semibold text-destructive">{erro}</p>}
       <button
         disabled={salvando}
         onClick={async () => {
@@ -345,10 +345,10 @@ function GerenciarBarraca({
       <AppHeader subtitulo="Administração" />
       <main className="mx-auto max-w-3xl px-4 pt-6">
         <div className="flex flex-wrap items-center gap-3">
-          <h1 className="flex-1 text-3xl font-extrabold">{barraca.nome}</h1>
+          <h1 className="flex-1 text-3xl font-bold">{barraca.nome}</h1>
           <button
             onClick={() => void aoVoltar()}
-            className="btn-base border-2 border-border bg-card"
+            className="btn-base border border-border bg-card"
           >
             Voltar às barracas
           </button>
@@ -359,7 +359,7 @@ function GerenciarBarraca({
             <button
               key={id}
               onClick={() => setAba(id)}
-              className={`btn-base border-2 ${
+              className={`btn-base border ${
                 aba === id
                   ? "border-primary bg-primary text-primary-foreground"
                   : "border-border bg-card"
@@ -376,13 +376,13 @@ function GerenciarBarraca({
             (dados.pronto ? (
               <AbaCardapio produtos={dados.produtos} />
             ) : (
-              <p className="text-lg font-bold">Carregando o cardápio…</p>
+              <p className="text-lg font-semibold">Carregando o cardápio…</p>
             ))}
           {aba === "equipe" &&
             (dados.pronto ? (
               <AbaEquipe />
             ) : (
-              <p className="text-lg font-bold">Carregando a equipe…</p>
+              <p className="text-lg font-semibold">Carregando a equipe…</p>
             ))}
           {aba === "importar" && <ImportarCardapio barracaId={barraca.id} />}
         </div>
@@ -396,7 +396,7 @@ function EditarDados({ barraca }: { barraca: BarracaAdmin }) {
   const [salvo, setSalvo] = useState(false);
   const [erro, setErro] = useState("");
   const campo =
-    "w-full rounded-xl border-2 border-border bg-background px-3 py-3 text-lg font-bold";
+    "w-full rounded-xl border border-border bg-background px-3 py-3 text-lg font-semibold";
 
   const linhas: Array<[keyof BarracaAdmin, string]> = [
     ["nome", "Nome"],
@@ -411,7 +411,7 @@ function EditarDados({ barraca }: { barraca: BarracaAdmin }) {
   return (
     <section className="card-praia grid gap-3 p-4">
       {linhas.map(([campoId, rotulo]) => (
-        <label key={campoId} className="block text-lg font-bold">
+        <label key={campoId} className="block text-lg font-semibold">
           {rotulo}
           <input
             value={String(form[campoId] ?? "")}
@@ -424,7 +424,7 @@ function EditarDados({ barraca }: { barraca: BarracaAdmin }) {
           />
         </label>
       ))}
-      <div className="text-lg font-bold">
+      <div className="text-lg font-semibold">
         Chave Pix
         <div className="mt-1">
           <CampoChavePix
@@ -436,13 +436,13 @@ function EditarDados({ barraca }: { barraca: BarracaAdmin }) {
           />
         </div>
       </div>
-      <div className="rounded-xl border-2 border-border p-3">
-        <p className="text-lg font-bold">Serviço do garçom</p>
+      <div className="rounded-xl border border-border p-3">
+        <p className="text-lg font-semibold">Serviço do garçom</p>
         <p className="text-base text-muted-foreground">
           Cobrado uma vez, no final, sobre o consumo. Vai direto pra chave Pix do garçom. Use 0 para
           não cobrar.
         </p>
-        <label className="mt-2 flex items-center gap-2 text-lg font-bold">
+        <label className="mt-2 flex items-center gap-2 text-lg font-semibold">
           <input
             inputMode="decimal"
             value={String(form.servico_percentual ?? 0)}
@@ -459,8 +459,8 @@ function EditarDados({ barraca }: { barraca: BarracaAdmin }) {
           %
         </label>
       </div>
-      <div className="rounded-xl border-2 border-border p-3">
-        <label className="flex items-center gap-3 text-lg font-bold">
+      <div className="rounded-xl border border-border p-3">
+        <label className="flex items-center gap-3 text-lg font-semibold">
           <input
             type="checkbox"
             checked={form.permite_pagar_final}
@@ -472,7 +472,7 @@ function EditarDados({ barraca }: { barraca: BarracaAdmin }) {
           />
           Cliente pode pôr na conta e pagar no final
         </label>
-        <label className="mt-3 block text-lg font-bold">
+        <label className="mt-3 block text-lg font-semibold">
           Limite da conta (opcional)
           <input
             inputMode="decimal"
@@ -488,7 +488,7 @@ function EditarDados({ barraca }: { barraca: BarracaAdmin }) {
           />
         </label>
       </div>
-      {erro && <p className="text-lg font-bold text-destructive">{erro}</p>}
+      {erro && <p className="text-lg font-semibold text-destructive">{erro}</p>}
       <button
         disabled={!chave.ok}
         onClick={async () => {
@@ -518,7 +518,7 @@ function EditarDados({ barraca }: { barraca: BarracaAdmin }) {
         Salvar
       </button>
 
-      {salvo && <p className="text-lg font-bold">Dados salvos.</p>}
+      {salvo && <p className="text-lg font-semibold">Dados salvos.</p>}
     </section>
   );
 }
@@ -558,7 +558,7 @@ function ImportarCardapio({ barracaId }: { barracaId: string }) {
   const [mensagem, setMensagem] = useState("");
 
   const campo =
-    "w-full rounded-xl border-2 border-border bg-background px-3 py-2 text-lg font-bold";
+    "w-full rounded-xl border border-border bg-background px-3 py-2 text-lg font-semibold";
 
   function validar(l: LinhaImportada): LinhaImportada {
     const valor = Number(String(l.preco).replace(",", "."));
@@ -571,7 +571,7 @@ function ImportarCardapio({ barracaId }: { barracaId: string }) {
   if (!linhas) {
     return (
       <section className="card-praia grid gap-3 p-4">
-        <h2 className="text-2xl font-extrabold">Importar cardápio</h2>
+        <h2 className="text-2xl font-bold">Importar cardápio</h2>
         <p className="text-base text-muted-foreground">
           Uma linha por item, no formato: categoria; nome do item; preço. Também aceita separação
           por tabulação (colado de uma planilha).
@@ -601,7 +601,7 @@ function ImportarCardapio({ barracaId }: { barracaId: string }) {
 
   return (
     <section className="grid gap-3">
-      <h2 className="text-2xl font-extrabold">Conferir cardápio</h2>
+      <h2 className="text-2xl font-bold">Conferir cardápio</h2>
       <p className="text-base text-muted-foreground">
         {linhas.length} item(ns) interpretado(s)
         {paraRevisar ? ` · ${paraRevisar} para revisar` : ""}. Nada é salvo sem a sua confirmação.
@@ -648,13 +648,13 @@ function ImportarCardapio({ barracaId }: { barracaId: string }) {
               />
               <button
                 onClick={() => setLinhas((atual) => atual!.filter((_, j) => j !== i))}
-                className="btn-base border-2 border-border bg-card text-destructive"
+                className="btn-base border border-border bg-card text-destructive"
               >
                 Tirar
               </button>
             </div>
             {l.revisar && (
-              <p className="text-base font-bold text-destructive">
+              <p className="text-base font-semibold text-destructive">
                 Revisar: nome ou preço não reconhecido.
               </p>
             )}
@@ -662,7 +662,7 @@ function ImportarCardapio({ barracaId }: { barracaId: string }) {
         ))}
       </div>
 
-      {mensagem && <p className="text-lg font-bold">{mensagem}</p>}
+      {mensagem && <p className="text-lg font-semibold">{mensagem}</p>}
 
       <div className="flex flex-wrap gap-2">
         <button
@@ -688,7 +688,7 @@ function ImportarCardapio({ barracaId }: { barracaId: string }) {
         >
           Salvar no cardápio
         </button>
-        <button onClick={() => setLinhas(null)} className="btn-base border-2 border-border bg-card">
+        <button onClick={() => setLinhas(null)} className="btn-base border border-border bg-card">
           Voltar e editar o texto
         </button>
       </div>
@@ -712,12 +712,12 @@ function BlocoLinks({ barraca }: { barraca: BarracaAdmin }) {
   const mensagem = `Seu painel BóraMar: ${DOMINIO}/${barraca.slug}/painel. Tela do garçom: ${DOMINIO}/${barraca.slug}/garcom. PIN: ${barraca.pin}`;
 
   return (
-    <section className="mt-4 rounded-2xl border-2 border-border bg-background p-3">
-      <h3 className="text-xl font-extrabold">Links</h3>
+    <section className="mt-4 rounded-2xl border border-border bg-background p-3">
+      <h3 className="text-xl font-bold">Links</h3>
       <div className="mt-2 grid gap-3">
         {links.map(([rotulo, url]) => (
           <div key={url} className="grid gap-1">
-            <p className="text-base font-bold">{rotulo}</p>
+            <p className="text-base font-semibold">{rotulo}</p>
             <p className="break-all text-base text-muted-foreground">{url}</p>
             <div className="flex flex-wrap gap-2">
               <button
@@ -729,7 +729,7 @@ function BlocoLinks({ barraca }: { barraca: BarracaAdmin }) {
                     setCopiado("");
                   }
                 }}
-                className="btn-base border-2 border-border bg-card"
+                className="btn-base border border-border bg-card"
               >
                 {copiado === url ? "Copiado!" : "Copiar"}
               </button>
@@ -737,7 +737,7 @@ function BlocoLinks({ barraca }: { barraca: BarracaAdmin }) {
                 href={url}
                 target="_blank"
                 rel="noreferrer"
-                className="btn-base border-2 border-border bg-card"
+                className="btn-base border border-border bg-card"
               >
                 Abrir em nova aba
               </a>

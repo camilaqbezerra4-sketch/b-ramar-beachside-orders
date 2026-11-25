@@ -146,12 +146,12 @@ export function JanelaEscolhas({
       <div className="border-b-2 border-border bg-card px-4 py-3">
         <div className="mx-auto flex max-w-3xl items-center justify-between gap-3">
           <div className="min-w-0">
-            <h2 className="text-2xl font-extrabold">{produto.nome}</h2>
+            <h2 className="text-2xl font-bold">{produto.nome}</h2>
             {produto.descricao && (
               <p className="text-base text-muted-foreground">{produto.descricao}</p>
             )}
           </div>
-          <button onClick={aoFechar} className="btn-base border-2 border-border">
+          <button onClick={aoFechar} className="btn-base border border-border">
             Fechar
           </button>
         </div>
@@ -162,7 +162,7 @@ export function JanelaEscolhas({
           const marcados = escolhas[g.id] ?? [];
           return (
             <section key={g.id} className="mb-6">
-              <h3 className="text-xl font-extrabold">{g.nome}</h3>
+              <h3 className="text-xl font-bold">{g.nome}</h3>
               <p className="text-base text-muted-foreground">
                 {g.max === 1
                   ? g.min
@@ -179,7 +179,7 @@ export function JanelaEscolhas({
                       disabled={!i.disponivel}
                       onClick={() => tocar(g.id, i.id, g.max)}
                       aria-pressed={marcado}
-                      className={`btn-base border-2 ${
+                      className={`btn-base border ${
                         marcado
                           ? "border-primary bg-primary text-primary-foreground"
                           : i.disponivel
@@ -204,13 +204,13 @@ export function JanelaEscolhas({
             </section>
           );
         })}
-        <label className="block text-lg font-extrabold">
+        <label className="block text-lg font-bold">
           Observação <span className="font-semibold text-muted-foreground">(opcional)</span>
           <input
             value={obs}
             onChange={(e) => setObs(e.target.value.slice(0, MAX_OBS))}
             placeholder="Ex.: pouco açúcar, sem gelo"
-            className="mt-1 w-full rounded-xl border-2 border-border bg-card px-3 py-3 text-base font-semibold"
+            className="mt-1 w-full rounded-xl border border-border bg-card px-3 py-3 text-base font-semibold"
           />
         </label>
       </div>
@@ -220,13 +220,13 @@ export function JanelaEscolhas({
           <div className="min-w-0 flex-1">
             {resultado.ok ? (
               <>
-                <p className="text-sm font-bold text-muted-foreground">
+                <p className="text-sm font-semibold text-muted-foreground">
                   {resultado.detalhe || produto.nome}
                 </p>
-                <p className="text-2xl font-extrabold">{formatarReal(resultado.precoUnitario)}</p>
+                <p className="text-2xl font-bold">{formatarReal(resultado.precoUnitario)}</p>
               </>
             ) : (
-              <p className="text-lg font-bold">{resultado.erro}</p>
+              <p className="text-lg font-semibold">{resultado.erro}</p>
             )}
           </div>
           <button
@@ -246,7 +246,7 @@ export function JanelaEscolhas({
 export function SelosVeg({ produto }: { produto: Produto }) {
   if (!produto.vegano && !produto.vegetariano) return null;
   return (
-    <span className="ml-2 inline-block rounded-full bg-success/15 px-2 py-0.5 align-middle text-sm font-extrabold text-success">
+    <span className="ml-2 inline-block rounded-full bg-success/15 px-2 py-0.5 align-middle text-sm font-bold text-success">
       {produto.vegano ? "🌱 vegano" : "🌱 vegetariano"}
     </span>
   );
@@ -270,18 +270,18 @@ export function ItensParaLancar({
   return (
     <>
       {carrinho.linhas.length > 0 && (
-        <ul className="card-praia mt-5 divide-y-2 divide-border p-3">
+        <ul className="card-praia mt-5 divide-y divide-border p-3">
           {carrinho.linhas.map((l) => (
             <li key={l.chave} className="flex items-center gap-2 py-2 text-base">
-              <span className="min-w-0 flex-1 font-bold">
+              <span className="min-w-0 flex-1 font-semibold">
                 {l.quantidade}× {l.nome}
                 <CampoObs obs={l.obs} aoMudar={(o) => carrinho.definirObs(l.chave, o)} />
               </span>
-              <span className="font-extrabold">{formatarReal(l.preco * l.quantidade)}</span>
+              <span className="font-bold">{formatarReal(l.preco * l.quantidade)}</span>
               <button
                 aria-label={`Tirar um ${l.nome}`}
                 onClick={() => carrinho.tirar(l.chave)}
-                className="btn-base h-10 w-10 border-2 border-border bg-card px-0 text-xl"
+                className="btn-base h-10 w-10 border border-border bg-card px-0 text-xl"
               >
                 −
               </button>
@@ -299,12 +299,12 @@ export function ItensParaLancar({
         if (!daCategoria.length) return null;
         return (
           <section key={c} className="mt-5">
-            <h3 className="text-xl font-extrabold">{c}</h3>
+            <h3 className="text-xl font-bold">{c}</h3>
             <div className="mt-2 grid gap-2">
               {daCategoria.map((p) => (
                 <div key={p.id} className="card-praia flex items-center gap-2 p-3">
                   <div className="min-w-0 flex-1">
-                    <p className="text-lg font-extrabold">
+                    <p className="text-lg font-bold">
                       {p.nome}
                       <SelosVeg produto={p} />
                     </p>
@@ -316,11 +316,11 @@ export function ItensParaLancar({
                   <button
                     onClick={() => carrinho.tirarDoProduto(p.id)}
                     aria-label={`Tirar ${p.nome}`}
-                    className="btn-base h-12 w-12 border-2 border-border bg-card text-2xl"
+                    className="btn-base h-12 w-12 border border-border bg-card text-2xl"
                   >
                     −
                   </button>
-                  <span className="w-8 text-center text-lg font-extrabold">
+                  <span className="w-8 text-center text-lg font-bold">
                     {carrinho.quantidadeDo(p.id)}
                   </span>
                   <button
@@ -348,7 +348,7 @@ export function ItensParaLancar({
         />
       )}
       {termo && categorias.length === 0 && (
-        <p className="mt-4 text-lg font-bold text-muted-foreground">
+        <p className="mt-4 text-lg font-semibold text-muted-foreground">
           Nada com “{busca.trim()}” no cardápio.
         </p>
       )}
@@ -373,13 +373,13 @@ export function BuscaCardapio({ valor, aoMudar }: { valor: string; aoMudar: (v: 
         onChange={(e) => aoMudar(e.target.value)}
         placeholder="🔍 Buscar no cardápio"
         aria-label="Buscar no cardápio"
-        className="w-full rounded-xl border-2 border-border bg-card px-3 py-3 text-lg font-semibold"
+        className="w-full rounded-xl border border-border bg-card px-3 py-3 text-lg font-semibold"
       />
       {valor && (
         <button
           onClick={() => aoMudar("")}
           aria-label="Limpar busca"
-          className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full px-3 py-1 text-lg font-extrabold text-muted-foreground"
+          className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full px-3 py-1 text-lg font-bold text-muted-foreground"
         >
           ✕
         </button>
@@ -407,7 +407,7 @@ export function CampoObs({ obs, aoMudar }: { obs: string; aoMudar: (obs: string)
         }}
         placeholder="Ex.: pouco açúcar, sem gelo"
         aria-label="Observação"
-        className="mt-1 block w-full rounded-lg border-2 border-primary bg-background px-2 py-1 text-base font-semibold"
+        className="mt-1 block w-full rounded-lg border border-primary bg-background px-2 py-1 text-base font-semibold"
       />
     );
   return (
@@ -416,7 +416,7 @@ export function CampoObs({ obs, aoMudar }: { obs: string; aoMudar: (obs: string)
         setTexto(obs);
         setEditando(true);
       }}
-      className="mt-0.5 block text-left text-sm font-bold text-primary underline-offset-2 hover:underline"
+      className="mt-0.5 block text-left text-sm font-semibold text-primary underline-offset-2 hover:underline"
     >
       {obs ? `Obs: ${obs} · mudar` : "+ observação"}
     </button>
@@ -430,7 +430,7 @@ export function NomeComObs({ nome }: { nome: string }) {
     <>
       {base}
       {obs && (
-        <span className="ml-1 rounded-md bg-accent/20 px-1.5 py-0.5 font-extrabold text-foreground">
+        <span className="ml-1 rounded-md bg-accent/20 px-1.5 py-0.5 font-bold text-foreground">
           Obs: {obs}
         </span>
       )}
