@@ -227,6 +227,7 @@ export type Database = {
       }
       pedidos: {
         Row: {
+          movido_em: string | null
           barraca_id: string
           criado_em: string
           fechamento_solicitado_em: string | null
@@ -244,6 +245,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          movido_em?: string | null
           barraca_id: string
           criado_em?: string
           fechamento_solicitado_em?: string | null
@@ -261,6 +263,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          movido_em?: string | null
           barraca_id?: string
           criado_em?: string
           fechamento_solicitado_em?: string | null
@@ -362,6 +365,7 @@ export type Database = {
       }
       servicos: {
         Row: {
+          movido_em: string | null
           barraca_id: string
           criado_em: string
           forma: string
@@ -373,6 +377,7 @@ export type Database = {
           valor: number
         }
         Insert: {
+          movido_em?: string | null
           barraca_id: string
           criado_em?: string
           forma?: string
@@ -384,6 +389,7 @@ export type Database = {
           valor: number
         }
         Update: {
+          movido_em?: string | null
           barraca_id?: string
           criado_em?: string
           forma?: string

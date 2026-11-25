@@ -19,6 +19,7 @@ import {
   fecharConta,
   formatarReal,
   liberarMesa,
+  trocarMesa,
   recusarConta,
   registrarServico,
   sairDoPainel,
@@ -746,6 +747,7 @@ function AbaMesas({
 }) {
   const { barraca, mesas, garcons, pedidos, liberacoes, servicos } = useDados();
   const [aberta, setAberta] = useState<string | null>(null);
+  const [trocando, setTrocando] = useState(false);
 
   const hora = (iso: string) =>
     new Date(iso).toLocaleTimeString("pt-BR", {
@@ -760,7 +762,13 @@ function AbaMesas({
     const resumo = resumoDaMesa(pedidos, liberacoes, servicos, mesa.id, barraca.servico_percentual);
     return (
       <>
-        <button onClick={() => setAberta(null)} className="btn-base border border-border bg-card">
+        <button
+          onClick={() => {
+            setAberta(null);
+            setTrocando(false);
+          }}
+          className="btn-base border border-border bg-card"
+        >
           ← Voltar às mesas
         </button>
         <h1 className="mt-3 text-3xl font-bold">Mesa {mesa.numero}</h1>
@@ -774,8 +782,15 @@ function AbaMesas({
               <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <p className="text-xl font-bold">{hora(p.criado_em)}</p>
                 <span className="text-base text-muted-foreground">
-                  {p.status} · {p.forma_pagamento === "cartao" ? "cartão" : "Pix"} ·{" "}
-                  {nomeGarcom(p.garcom_id)}
+                  {p.status} ·{" "}
+                  {p.na_conta && !p.pago
+                    ? "na conta"
+                    : p.forma_pagamento === "cartao"
+                      ? "cartão"
+                      : p.forma_pagamento === "dinheiro"
+                        ? "dinheiro"
+                        : "Pix"}{" "}
+                  · {nomeGarcom(p.garcom_id)}
                 </span>
               </div>
               <p className="mt-1 text-lg font-semibold">
@@ -807,6 +822,72 @@ function AbaMesas({
               {resumo.emAberto > 0 ? "Fechar conta" : "Cobrar serviço"}
             </button>
           </div>
+        )}
+        {atual.pedidos.length > 0 && !trocando && (
+          <button
+            onClick={() => setTrocando(true)}
+            className="btn-base mt-3 w-full border border-primary bg-card text-primary"
+          >
+            ⇄ Trocar de mesa
+          </button>
+        )}
+        {trocando && (
+          <section className="mt-3 rounded-2xl border border-border bg-card p-4">
+            <div className="flex items-center justify-between gap-2">
+              <p className="font-semibold">Para qual mesa a turma vai?</p>
+              <button onClick={() => setTrocando(false)} className="text-muted-foreground">
+                Cancelar
+              </button>
+            </div>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Os pedidos, a conta e o serviço vão junto. A Mesa {mesa.numero} fica livre.
+            </p>
+            <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4">
+              {[...mesas]
+                .filter((m) => m.id !== mesa.id)
+                .sort((a, b) => a.numero - b.numero)
+                .map((m) => {
+                  const ocupada = gruposDaMesa(pedidos, liberacoes, m.id).atual.pedidos.length > 0;
+                  return (
+                    <button
+                      key={m.id}
+                      onClick={() => {
+                        if (
+                          ocupada &&
+                          !window.confirm(
+                            `A Mesa ${m.numero} está ocupada. Juntar as duas turmas numa conta só, na Mesa ${m.numero}?`,
+                          )
+                        )
+                          return;
+                        if (
+                          !ocupada &&
+                          !window.confirm(
+                            `Levar a turma da Mesa ${mesa.numero} para a Mesa ${m.numero}?`,
+                          )
+                        )
+                          return;
+                        setTrocando(false);
+                        void trocarMesa(mesa.id, m.id, ocupada).then((ok) => {
+                          if (!ok) return;
+                          setAberta(m.id);
+                          window.alert(
+                            `Pronto! A turma agora está na Mesa ${m.numero}. Para continuar pedindo pelo celular, o cliente lê o QR Code da Mesa ${m.numero}.`,
+                          );
+                        });
+                      }}
+                      className={`rounded-xl border px-2 py-3 text-center ${
+                        ocupada ? "border-border bg-muted" : "border-success bg-card"
+                      }`}
+                    >
+                      <span className="block text-lg font-semibold">{m.numero}</span>
+                      <span className="block text-xs text-muted-foreground">
+                        {ocupada ? "ocupada" : "livre"}
+                      </span>
+                    </button>
+                  );
+                })}
+            </div>
+          </section>
         )}
         <button
           disabled={atual.pedidos.length === 0}
@@ -1696,7 +1777,7 @@ function FecharMesa({ mesaId, aoFechar }: { mesaId: string; aoFechar: () => void
     for (const i of p.itens)
       itens.set(i.nome_produto, (itens.get(i.nome_produto) ?? 0) + i.quantidade);
 
-  const fazer = async (acao: () => Promise<void>) => {
+  const fazer = async (acao: () => Promise<unknown>) => {
     setSalvando(true);
     await acao();
     setSalvando(false);

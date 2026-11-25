@@ -223,16 +223,20 @@ export async function sairDoPainel(slug: string) {
   await recarregar();
 }
 
-async function agir(acao: AcaoPainel) {
-  if (!slugAtivo) return;
+/** Executa uma ação do painel. Devolve true se deu certo. */
+async function agir(acao: AcaoPainel): Promise<boolean> {
+  if (!slugAtivo) return false;
+  let ok = true;
   try {
     await acaoPainel({ data: { slug: slugAtivo, acao } });
   } catch (e) {
+    ok = false;
     console.error("BóraMar: ação não concluída", e);
     if (typeof window !== "undefined")
       window.alert("Não deu para salvar. Confira a internet e tente de novo.");
   }
   await recarregar();
+  return ok;
 }
 
 export const atualizarStatus = (pedidoId: string, status: StatusPedido) =>
@@ -310,6 +314,10 @@ export const registrarServico = (
 
 /** Encerra o grupo atual da mesa: os próximos pedidos começam um grupo novo. */
 export const liberarMesa = (mesaId: string) => agir({ tipo: "liberarMesa", mesaId });
+
+/** Leva a turma (pedidos, conta e serviço) para outra mesa e libera a antiga. */
+export const trocarMesa = (de: string, para: string, juntar: boolean) =>
+  agir({ tipo: "trocarMesa", de, para, juntar });
 
 // =====================================================================
 // Histórico (Resultados e Histórico do painel)

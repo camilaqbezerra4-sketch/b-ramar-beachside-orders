@@ -76,6 +76,8 @@ export interface Pedido {
   total: number;
   gorjeta: number;
   criado_em: string;
+  /** quando foi levado para outra mesa (troca de mesa); conta como o momento na turma */
+  movido_em?: string | null;
   pago_em: string | null;
   /** pedido "pagar no final", na conta da mesa */
   na_conta: boolean;
@@ -92,6 +94,8 @@ export interface Servico {
   forma: string;
   situacao: string;
   criado_em: string;
+  /** quando foi levado para outra mesa (troca de mesa); conta como o momento na turma */
+  movido_em?: string | null;
 }
 
 /** Pode ir para a cozinha: está pago, ou está na conta já aberta da mesa. */

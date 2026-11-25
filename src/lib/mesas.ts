@@ -10,6 +10,10 @@ export interface GrupoMesa {
 
 const ativo = (p: Pedido) => p.status !== "cancelado" && p.status !== "expirado";
 
+/** Momento que vale para a turma: quando foi trocado de mesa, ou quando foi criado. */
+export const momento = (x: { criado_em: string; movido_em?: string | null }) =>
+  x.movido_em ?? x.criado_em;
+
 /** Divide os pedidos de uma mesa em grupos, separados pelas liberações. */
 export function gruposDaMesa(
   pedidos: Pedido[],
@@ -18,7 +22,7 @@ export function gruposDaMesa(
 ): { atual: GrupoMesa; anteriores: GrupoMesa[] } {
   const daMesa = pedidos
     .filter((p) => p.mesa_id === mesaId && ativo(p))
-    .sort((a, b) => a.criado_em.localeCompare(b.criado_em));
+    .sort((a, b) => momento(a).localeCompare(momento(b)));
   const cortes = liberacoes
     .filter((l) => l.mesa_id === mesaId)
     .map((l) => l.liberada_em)
@@ -26,7 +30,7 @@ export function gruposDaMesa(
 
   const montar = (lista: Pedido[], fim: string | null): GrupoMesa => ({
     fim,
-    inicio: lista[0]?.criado_em ?? null,
+    inicio: lista[0] ? momento(lista[0]) : null,
     pedidos: lista,
     total: lista.reduce((s, p) => s + p.total, 0),
   });
@@ -34,8 +38,8 @@ export function gruposDaMesa(
   const anteriores: GrupoMesa[] = [];
   let restante = daMesa;
   for (const corte of cortes) {
-    const dentro = restante.filter((p) => p.criado_em < corte);
-    restante = restante.filter((p) => p.criado_em >= corte);
+    const dentro = restante.filter((p) => momento(p) < corte);
+    restante = restante.filter((p) => momento(p) >= corte);
     if (dentro.length) anteriores.push(montar(dentro, corte));
   }
 
@@ -73,14 +77,14 @@ export function resumoDaMesa(
   const consumo = confirmados.reduce((s, p) => s + p.total - p.gorjeta, 0);
   const desde = atual.inicio;
   const pagoServico = servicos
-    .filter((x) => x.mesa_id === mesaId && (!desde || x.criado_em >= desde))
+    .filter((x) => x.mesa_id === mesaId && (!desde || momento(x) >= desde))
     .reduce((s, x) => s + x.valor, 0);
   const sugerido = Math.round(consumo * percentualServico) / 100;
   return {
     consumo,
     contaPedidos: naConta,
     emAberto: naConta.reduce((s, p) => s + p.total, 0),
-    contaDesde: naConta[0]?.criado_em ?? null,
+    contaDesde: naConta[0] ? momento(naConta[0]) : null,
     fechamentoSolicitado: naConta.some((p) => !!p.fechamento_solicitado_em),
     servicoSugerido: sugerido,
     servicoPago: pagoServico,

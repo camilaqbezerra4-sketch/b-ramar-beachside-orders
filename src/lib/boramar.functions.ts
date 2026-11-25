@@ -139,6 +139,7 @@ type LinhaPedido = {
   total: number | string;
   gorjeta: number | string;
   criado_em: string;
+  movido_em?: string | null;
   pago_em: string | null;
   na_conta?: boolean;
   fechamento_solicitado_em?: string | null;
@@ -169,6 +170,7 @@ function formatarPedido(p: LinhaPedido) {
     total: Number(p.total),
     gorjeta: Number(p.gorjeta),
     criado_em: p.criado_em,
+    movido_em: p.movido_em ?? null,
     pago_em: p.pago_em ?? null,
     itens: (p.itens_pedido ?? []).map((i) => ({
       id: i.id,
@@ -250,7 +252,7 @@ async function servicosDesde(barracaId: string, desdeMs: number) {
   const sb = await db();
   const { data, error } = await sb
     .from("servicos")
-    .select("id, mesa_id, garcom_id, valor, forma, situacao, criado_em")
+    .select("id, mesa_id, garcom_id, valor, forma, situacao, criado_em, movido_em")
     .eq("barraca_id", barracaId)
     .gte("criado_em", new Date(desdeMs).toISOString())
     .order("criado_em", { ascending: true })
@@ -274,6 +276,9 @@ async function inicioDaTurma(mesaId: string) {
   return new Date(Math.max(ultima, Date.now() - JANELA_OPERACAO)).toISOString();
 }
 
+/** Filtro "está na turma": criado depois do início, ou trazido de outra mesa depois dele. */
+const desdeNaTurma = (desde: string) => `criado_em.gte."${desde}",movido_em.gte."${desde}"`;
+
 const centavos = (v: number) => Math.round(v * 100) / 100;
 
 /** Tudo o que a turma atual da mesa consumiu, o que está na conta e o serviço. */
@@ -288,14 +293,14 @@ async function contaDaMesa(barracaId: string, mesaId: string) {
       )
       .eq("barraca_id", barracaId)
       .eq("mesa_id", mesaId)
-      .gte("criado_em", desde)
+      .or(desdeNaTurma(desde))
       .not("status", "in", "(cancelado,expirado)"),
     sb
       .from("servicos")
       .select("valor")
       .eq("barraca_id", barracaId)
       .eq("mesa_id", mesaId)
-      .gte("criado_em", desde),
+      .or(desdeNaTurma(desde)),
     sb.from("barracas").select("servico_percentual").eq("id", barracaId).maybeSingle(),
   ]);
   if (pedidos.error) throw pedidos.error;
@@ -848,6 +853,7 @@ export type AcaoPainel =
   | { tipo: "removerGarcom"; garcomId: string }
   | { tipo: "alternarQrCode"; mesaId: string }
   | { tipo: "liberarMesa"; mesaId: string }
+  | { tipo: "trocarMesa"; de: string; para: string; juntar: boolean }
   | { tipo: "abrirConta"; pedidoId: string }
   | { tipo: "recusarConta"; pedidoId: string }
   | { tipo: "fecharConta"; mesaId: string; forma: "pix" | "cartao" | "dinheiro" }
@@ -1099,6 +1105,59 @@ export const acaoPainel = createServerFn({ method: "POST" })
             forma,
             situacao: "confirmado",
           }),
+        );
+        break;
+      }
+      case "trocarMesa": {
+        if (!ehUuid(a.de) || !ehUuid(a.para) || a.de === a.para) throw new Error("Mesa inválida.");
+        const { data: duas } = await sb
+          .from("mesas")
+          .select("id")
+          .eq("barraca_id", bid)
+          .in("id", [a.de, a.para]);
+        if ((duas ?? []).length !== 2) throw new Error("Mesa inválida.");
+        const [desdeDe, desdePara] = await Promise.all([
+          inicioDaTurma(a.de),
+          inicioDaTurma(a.para),
+        ]);
+        const daTurma = (mesaId: string, desde: string) =>
+          sb
+            .from("pedidos")
+            .select("id")
+            .eq("barraca_id", bid)
+            .eq("mesa_id", mesaId)
+            .or(desdeNaTurma(desde))
+            .not("status", "in", "(cancelado,expirado)");
+        const [origem, destino] = await Promise.all([
+          daTurma(a.de, desdeDe),
+          daTurma(a.para, desdePara),
+        ]);
+        if (origem.error) throw origem.error;
+        if (destino.error) throw destino.error;
+        const ids = (origem.data ?? []).map((p) => p.id);
+        if (ids.length === 0) throw new Error("A mesa de origem não tem pedidos.");
+        if ((destino.data ?? []).length > 0 && !a.juntar)
+          throw new Error("A mesa de destino está ocupada.");
+        const agora = new Date().toISOString();
+        conferir(
+          await sb
+            .from("pedidos")
+            .update({ mesa_id: a.para, movido_em: agora })
+            .eq("barraca_id", bid)
+            .in("id", ids),
+        );
+        conferir(
+          await sb
+            .from("servicos")
+            .update({ mesa_id: a.para, movido_em: agora })
+            .eq("barraca_id", bid)
+            .eq("mesa_id", a.de)
+            .or(desdeNaTurma(desdeDe)),
+        );
+        conferir(
+          await sb
+            .from("liberacoes_mesa")
+            .insert({ barraca_id: bid, mesa_id: a.de, liberada_em: agora }),
         );
         break;
       }
