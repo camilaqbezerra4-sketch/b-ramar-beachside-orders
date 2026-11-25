@@ -1315,6 +1315,13 @@ function Bloco({
   );
 }
 
+/** Botões de "como recebeu": cada forma com cor e ícone próprios, para não confundir. */
+const FORMAS_RECEBIMENTO = [
+  ["pix", "📲 Pix", "bg-success text-success-foreground"],
+  ["cartao", "💳 Cartão", "bg-primary text-primary-foreground"],
+  ["dinheiro", "💵 Dinheiro", "bg-accent text-accent-foreground"],
+] as const;
+
 function LancarPedido({ aoFechar }: { aoFechar: () => void }) {
   const { mesas, garcons, produtos } = useDados();
   const [mesaId, setMesaId] = useState(mesas[0]?.id ?? "");
@@ -1590,18 +1597,12 @@ function FecharMesa({ mesaId, aoFechar }: { mesaId: string; aoFechar: () => void
             )}
             <p className="mt-4 text-lg font-bold">Recebeu? Toca em como foi:</p>
             <div className="mt-2 grid grid-cols-3 gap-2">
-              {(
-                [
-                  ["pix", "Pix"],
-                  ["cartao", "Cartão"],
-                  ["dinheiro", "Dinheiro"],
-                ] as const
-              ).map(([forma, rotulo]) => (
+              {FORMAS_RECEBIMENTO.map(([forma, rotulo, cor]) => (
                 <button
                   key={forma}
                   disabled={salvando}
                   onClick={() => void fazer(() => fecharConta(mesaId, forma))}
-                  className="btn-base bg-success text-success-foreground"
+                  className={`btn-base px-2 ${cor}`}
                 >
                   {rotulo}
                 </button>
@@ -1660,13 +1661,7 @@ function FecharMesa({ mesaId, aoFechar }: { mesaId: string; aoFechar: () => void
                 : "Primeiro, toca em quem atendeu."}
             </p>
             <div className="mt-2 grid grid-cols-3 gap-2">
-              {(
-                [
-                  ["pix", "Pix"],
-                  ["cartao", "Cartão"],
-                  ["dinheiro", "Dinheiro"],
-                ] as const
-              ).map(([forma, rotulo]) => (
+              {FORMAS_RECEBIMENTO.map(([forma, rotulo, cor]) => (
                 <button
                   key={forma}
                   disabled={salvando || !garcomId}
@@ -1680,7 +1675,7 @@ function FecharMesa({ mesaId, aoFechar }: { mesaId: string; aoFechar: () => void
                       ),
                     )
                   }
-                  className="btn-base bg-success text-success-foreground"
+                  className={`btn-base px-2 ${cor} disabled:opacity-40`}
                 >
                   {rotulo}
                 </button>
