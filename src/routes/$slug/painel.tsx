@@ -1292,7 +1292,12 @@ function AbaResultados() {
 
       <section>
         <h2 className="text-xl font-semibold">Lucro estimado · últimos {dias} dias</h2>
-        {!temCusto ? (
+        {temCusto && rPeriodo.total.receitaComCusto === 0 ? (
+          <p className="mt-2 text-muted-foreground">
+            O custo vale para as vendas feitas depois de cadastrado. As próximas vendas já aparecem
+            aqui.
+          </p>
+        ) : !temCusto ? (
           <p className="mt-2 text-muted-foreground">
             Cadastre o custo dos itens na aba Cardápio (campo “Custo R$”) para ver quanto sobra de
             cada venda.
