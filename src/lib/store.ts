@@ -92,7 +92,7 @@ function definir(patch: Partial<DadosBarraca>) {
 
 let slugAtivo: string | null = null;
 let carregando: Promise<void> | null = null;
-let recarregarDeNovo = false;
+let proxima: Promise<void> | null = null;
 
 async function carregar() {
   const slug = slugAtivo;
@@ -122,20 +122,22 @@ async function carregar() {
   assinarSinais(r.barraca.id);
 }
 
-/** Recarrega a operação; chamadas simultâneas viram uma só. */
+/**
+ * Recarrega a operação. Chamadas simultâneas viram no máximo uma recarga extra,
+ * e quem chama sempre recebe uma promessa que só termina com os dados novos.
+ */
 export function recarregar(): Promise<void> {
   if (carregando) {
-    recarregarDeNovo = true;
-    return carregando;
+    proxima ??= carregando.then(() => {
+      proxima = null;
+      return recarregar();
+    });
+    return proxima;
   }
   carregando = carregar()
     .catch((e) => console.error("BóraMar: falha ao carregar dados", e))
     .finally(() => {
       carregando = null;
-      if (recarregarDeNovo) {
-        recarregarDeNovo = false;
-        void recarregar();
-      }
     });
   return carregando;
 }
