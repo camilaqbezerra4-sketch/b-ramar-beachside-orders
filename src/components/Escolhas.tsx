@@ -110,7 +110,7 @@ export function JanelaEscolhas({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-background">
+    <div className="fixed inset-0 z-[60] flex flex-col bg-background">
       <div className="border-b-2 border-border bg-card px-4 py-3">
         <div className="mx-auto flex max-w-3xl items-center justify-between gap-3">
           <div className="min-w-0">
