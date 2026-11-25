@@ -1,15 +1,9 @@
 // Tipos espelhando o schema previsto no Supabase.
 export type Categoria = string;
 export type StatusPedido =
-  | "novo"
-  | "pago"
-  | "em_preparo"
-  | "pronto"
-  | "entregue"
-  | "cancelado"
-  | "expirado";
+  "novo" | "pago" | "em_preparo" | "pronto" | "entregue" | "cancelado" | "expirado";
 export type OrigemPedido = "cliente" | "garcom";
-export type FormaPagamento = "pix" | "cartao";
+export type FormaPagamento = "pix" | "cartao" | "dinheiro";
 
 export interface Barraca {
   id: string;
@@ -20,6 +14,10 @@ export interface Barraca {
   whatsapp_suporte: string;
   ativa: boolean;
   criado_em: string;
+  /** 0 = a barraca não cobra serviço */
+  servico_percentual: number;
+  permite_pagar_final: boolean;
+  limite_conta?: number | null;
 }
 
 export interface Mesa {
@@ -68,8 +66,25 @@ export interface Pedido {
   gorjeta: number;
   criado_em: string;
   pago_em: string | null;
+  /** pedido "pagar no final", na conta da mesa */
+  na_conta: boolean;
+  fechamento_solicitado_em: string | null;
   itens: ItemPedido[];
 }
+
+/** Serviço do garçom pago na saída (Pix direto para ele, ou registrado pelo caixa). */
+export interface Servico {
+  id: string;
+  mesa_id: string | null;
+  garcom_id: string | null;
+  valor: number;
+  forma: string;
+  situacao: string;
+  criado_em: string;
+}
+
+/** Pode ir para a cozinha: está pago, ou está na conta já aberta da mesa. */
+export const liberadoParaCozinha = (p: Pedido) => p.pago || (p.na_conta && p.status !== "novo");
 
 export interface LiberacaoMesa {
   id: string;
@@ -77,7 +92,6 @@ export interface LiberacaoMesa {
   mesa_id: string;
   liberada_em: string;
 }
-
 
 export const CATEGORIAS: Categoria[] = ["Bebidas", "Porções", "Sobremesas"];
 

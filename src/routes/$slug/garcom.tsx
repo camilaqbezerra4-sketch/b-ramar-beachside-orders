@@ -19,8 +19,7 @@ export const Route = createFileRoute("/$slug/garcom")({
       { title: "Tela do Garçom · BóraMar" },
       {
         name: "description",
-        content:
-          "Lance pedidos, receba no cartão e entregue os pratos prontos.",
+        content: "Lance pedidos, receba no cartão e entregue os pratos prontos.",
       },
       { property: "og:title", content: "Tela do Garçom · BóraMar" },
       {
@@ -39,9 +38,7 @@ function GarcomPage() {
   const { barraca, mesas, garcons, produtos, pedidos } = dados;
   const [lancando, setLancando] = useState(false);
 
-
-  const nomeMesa = (id: string) =>
-    mesas.find((m) => m.id === id)?.numero ?? "?";
+  const nomeMesa = (id: string) => mesas.find((m) => m.id === id)?.numero ?? "?";
 
   const noCartao = pedidos.filter(
     (p) => !p.pago && p.status === "novo" && p.forma_pagamento === "cartao",
@@ -52,9 +49,7 @@ function GarcomPage() {
     return (
       <div className="min-h-screen">
         <AppHeader subtitulo="Carregando" />
-        <p className="mx-auto max-w-xl px-4 pt-8 text-xl font-bold">
-          Carregando…
-        </p>
+        <p className="mx-auto max-w-xl px-4 pt-8 text-xl font-bold">Carregando…</p>
       </div>
     );
   }
@@ -101,9 +96,7 @@ function GarcomPage() {
           {noCartao.map((p) => (
             <div key={p.id} className="card-praia flex items-center gap-3 p-4">
               <div className="min-w-0 flex-1">
-                <p className="text-xl font-extrabold">
-                  Mesa {nomeMesa(p.mesa_id)}
-                </p>
+                <p className="text-xl font-extrabold">Mesa {nomeMesa(p.mesa_id)}</p>
                 <p className="text-lg font-bold">{formatarReal(p.total)}</p>
               </div>
               <button
@@ -115,9 +108,7 @@ function GarcomPage() {
             </div>
           ))}
           {noCartao.length === 0 && (
-            <p className="text-lg text-muted-foreground">
-              Nada para cobrar agora.
-            </p>
+            <p className="text-lg text-muted-foreground">Nada para cobrar agora.</p>
           )}
         </div>
 
@@ -126,13 +117,9 @@ function GarcomPage() {
           {prontos.map((p) => (
             <div key={p.id} className="card-praia flex items-center gap-3 p-4">
               <div className="min-w-0 flex-1">
-                <p className="text-xl font-extrabold">
-                  Mesa {nomeMesa(p.mesa_id)}
-                </p>
+                <p className="text-xl font-extrabold">Mesa {nomeMesa(p.mesa_id)}</p>
                 <p className="text-base text-muted-foreground">
-                  {p.itens
-                    .map((i) => `${i.quantidade}× ${i.nome_produto}`)
-                    .join(", ")}
+                  {p.itens.map((i) => `${i.quantidade}× ${i.nome_produto}`).join(", ")}
                 </p>
               </div>
               <button
@@ -144,9 +131,7 @@ function GarcomPage() {
             </div>
           ))}
           {prontos.length === 0 && (
-            <p className="text-lg text-muted-foreground">
-              Nenhum prato pronto agora.
-            </p>
+            <p className="text-lg text-muted-foreground">Nenhum prato pronto agora.</p>
           )}
         </div>
       </main>
@@ -156,7 +141,7 @@ function GarcomPage() {
   function LancarPedidoGarcom({ aoFechar }: { aoFechar: () => void }) {
     const [mesaId, setMesaId] = useState(mesas[0]?.id ?? "");
     const [garcomId, setGarcomId] = useState(garcons[0]?.id ?? "");
-    const [forma, setForma] = useState<"pix" | "cartao">("cartao");
+    const [forma, setForma] = useState<"pix" | "cartao" | "final">("final");
     const [carrinho, setCarrinho] = useState<Record<string, number>>({});
     const [enviando, setEnviando] = useState(false);
 
@@ -167,10 +152,7 @@ function GarcomPage() {
         quantidade,
       }))
       .filter((l) => l.produto && l.quantidade > 0);
-    const total = linhas.reduce(
-      (s, l) => s + l.produto.preco * l.quantidade,
-      0,
-    );
+    const total = linhas.reduce((s, l) => s + l.produto.preco * l.quantidade, 0);
 
     const mudar = (id: string, delta: number) =>
       setCarrinho((c) => {
@@ -215,7 +197,7 @@ function GarcomPage() {
             ))}
           </select>
           <div className="flex gap-2">
-            {(["pix", "cartao"] as const).map((f) => (
+            {(["final", "pix", "cartao"] as const).map((f) => (
               <button
                 key={f}
                 onClick={() => setForma(f)}
@@ -226,7 +208,7 @@ function GarcomPage() {
                     : "border-border bg-card"
                 }`}
               >
-                {f === "pix" ? "Pix" : "Cartão"}
+                {f === "final" ? "Na conta" : f === "pix" ? "Pix" : "Cartão"}
               </button>
             ))}
           </div>
@@ -239,15 +221,10 @@ function GarcomPage() {
               {produtos
                 .filter((p) => p.categoria === c && p.disponivel)
                 .map((p) => (
-                  <div
-                    key={p.id}
-                    className="card-praia flex items-center gap-2 p-3"
-                  >
+                  <div key={p.id} className="card-praia flex items-center gap-2 p-3">
                     <div className="min-w-0 flex-1">
                       <p className="text-lg font-extrabold">{p.nome}</p>
-                      <p className="text-base text-muted-foreground">
-                        {formatarReal(p.preco)}
-                      </p>
+                      <p className="text-base text-muted-foreground">{formatarReal(p.preco)}</p>
                     </div>
                     <button
                       onClick={() => mudar(p.id, -1)}
@@ -298,10 +275,7 @@ function GarcomPage() {
           >
             {enviando ? "Enviando…" : "Enviar pedido"}
           </button>
-          <button
-            onClick={aoFechar}
-            className="btn-base border-2 border-border bg-card"
-          >
+          <button onClick={aoFechar} className="btn-base border-2 border-border bg-card">
             Cancelar
           </button>
         </div>

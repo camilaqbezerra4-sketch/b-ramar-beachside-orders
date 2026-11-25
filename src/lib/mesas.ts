@@ -1,4 +1,4 @@
-import type { LiberacaoMesa, Pedido } from "./types";
+import type { LiberacaoMesa, Pedido, Servico } from "./types";
 
 export interface GrupoMesa {
   /** null quando é o grupo atual (ainda aberto) */
@@ -8,8 +8,7 @@ export interface GrupoMesa {
   total: number;
 }
 
-const ativo = (p: Pedido) =>
-  p.status !== "cancelado" && p.status !== "expirado";
+const ativo = (p: Pedido) => p.status !== "cancelado" && p.status !== "expirado";
 
 /** Divide os pedidos de uma mesa em grupos, separados pelas liberações. */
 export function gruposDaMesa(
@@ -44,20 +43,12 @@ export function gruposDaMesa(
 }
 
 /** Momento em que o grupo atual da mesa começou (null se a mesa está livre). */
-export function inicioDoGrupo(
-  pedidos: Pedido[],
-  liberacoes: LiberacaoMesa[],
-  mesaId: string,
-) {
+export function inicioDoGrupo(pedidos: Pedido[], liberacoes: LiberacaoMesa[], mesaId: string) {
   return gruposDaMesa(pedidos, liberacoes, mesaId).atual.inicio;
 }
 
 /** true quando o pedido é o primeiro do grupo atual da mesa. */
-export function abreGrupo(
-  pedido: Pedido,
-  pedidos: Pedido[],
-  liberacoes: LiberacaoMesa[],
-) {
+export function abreGrupo(pedido: Pedido, pedidos: Pedido[], liberacoes: LiberacaoMesa[]) {
   const { atual } = gruposDaMesa(pedidos, liberacoes, pedido.mesa_id);
   return atual.pedidos[0]?.id === pedido.id;
 }
@@ -65,7 +56,35 @@ export function abreGrupo(
 /** Só os grupos anteriores que começaram hoje. */
 export function anterioresDeHoje(anteriores: GrupoMesa[]) {
   const hoje = new Date().toDateString();
-  return anteriores.filter(
-    (g) => g.inicio && new Date(g.inicio).toDateString() === hoje,
-  );
+  return anteriores.filter((g) => g.inicio && new Date(g.inicio).toDateString() === hoje);
+}
+
+/** Conta e serviço da turma atual da mesa (mesma regra do servidor). */
+export function resumoDaMesa(
+  pedidos: Pedido[],
+  liberacoes: LiberacaoMesa[],
+  servicos: Servico[],
+  mesaId: string,
+  percentualServico: number,
+) {
+  const { atual } = gruposDaMesa(pedidos, liberacoes, mesaId);
+  const confirmados = atual.pedidos.filter((p) => p.pago || p.status !== "novo");
+  const naConta = atual.pedidos.filter((p) => p.na_conta && !p.pago && p.status !== "novo");
+  const consumo = confirmados.reduce((s, p) => s + p.total - p.gorjeta, 0);
+  const desde = atual.inicio;
+  const pagoServico = servicos
+    .filter((x) => x.mesa_id === mesaId && (!desde || x.criado_em >= desde))
+    .reduce((s, x) => s + x.valor, 0);
+  const sugerido = Math.round(consumo * percentualServico) / 100;
+  return {
+    consumo,
+    contaPedidos: naConta,
+    emAberto: naConta.reduce((s, p) => s + p.total, 0),
+    contaDesde: naConta[0]?.criado_em ?? null,
+    fechamentoSolicitado: naConta.some((p) => !!p.fechamento_solicitado_em),
+    servicoSugerido: sugerido,
+    servicoPago: pagoServico,
+    servicoPendente:
+      percentualServico > 0 ? Math.max(0, Math.round((sugerido - pagoServico) * 100) / 100) : 0,
+  };
 }

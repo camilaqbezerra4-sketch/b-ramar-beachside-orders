@@ -69,9 +69,7 @@ function AdminPage() {
             <p className="mt-2 text-muted-foreground">{erroCarga}</p>
           </div>
         ) : (
-          <p className="mx-auto max-w-3xl px-4 pt-8 text-xl font-bold">
-            Carregando…
-          </p>
+          <p className="mx-auto max-w-3xl px-4 pt-8 text-xl font-bold">Carregando…</p>
         )}
       </div>
     );
@@ -106,14 +104,8 @@ function AdminPage() {
               placeholder="Senha"
               className="w-full rounded-2xl border-2 border-border bg-card px-4 py-4 text-xl font-bold"
             />
-            {erro && (
-              <p className="text-lg font-bold text-destructive">
-                Senha incorreta.
-              </p>
-            )}
-            <button className="btn-base bg-primary text-primary-foreground">
-              Entrar
-            </button>
+            {erro && <p className="text-lg font-bold text-destructive">Senha incorreta.</p>}
+            <button className="btn-base bg-primary text-primary-foreground">Entrar</button>
             <Link to="/" className="btn-base border-2 border-border bg-card">
               Voltar ao início
             </Link>
@@ -161,11 +153,7 @@ function AdminPage() {
                   /{b.slug} · {b.mesas} mesas · {b.cidade}
                 </span>
               </div>
-              {!b.ativa && (
-                <p className="mt-1 text-lg font-bold text-destructive">
-                  Desativada
-                </p>
-              )}
+              {!b.ativa && <p className="mt-1 text-lg font-bold text-destructive">Desativada</p>}
               <div className="mt-3 flex flex-wrap gap-2">
                 <button
                   onClick={() => setSelecionada(b)}
@@ -428,10 +416,7 @@ function EditarDados({ barraca }: { barraca: BarracaAdmin }) {
           <input
             value={String(form[campoId] ?? "")}
             onChange={(e) => {
-              const valor =
-                campoId === "slug"
-                  ? normalizarSlug(e.target.value)
-                  : e.target.value;
+              const valor = campoId === "slug" ? normalizarSlug(e.target.value) : e.target.value;
               setForm({ ...form, [campoId]: valor });
               setSalvo(false);
             }}
@@ -451,6 +436,58 @@ function EditarDados({ barraca }: { barraca: BarracaAdmin }) {
           />
         </div>
       </div>
+      <div className="rounded-xl border-2 border-border p-3">
+        <p className="text-lg font-bold">Serviço do garçom</p>
+        <p className="text-base text-muted-foreground">
+          Cobrado uma vez, no final, sobre o consumo. Vai direto pra chave Pix do garçom. Use 0 para
+          não cobrar.
+        </p>
+        <label className="mt-2 flex items-center gap-2 text-lg font-bold">
+          <input
+            inputMode="decimal"
+            value={String(form.servico_percentual ?? 0)}
+            onChange={(e) => {
+              const n = Number(e.target.value.replace(",", "."));
+              setForm({
+                ...form,
+                servico_percentual: Number.isFinite(n) ? Math.max(0, Math.min(30, n)) : 0,
+              });
+              setSalvo(false);
+            }}
+            className={`w-24 ${campo}`}
+          />
+          %
+        </label>
+      </div>
+      <div className="rounded-xl border-2 border-border p-3">
+        <label className="flex items-center gap-3 text-lg font-bold">
+          <input
+            type="checkbox"
+            checked={form.permite_pagar_final}
+            onChange={(e) => {
+              setForm({ ...form, permite_pagar_final: e.target.checked });
+              setSalvo(false);
+            }}
+            className="h-6 w-6"
+          />
+          Cliente pode pôr na conta e pagar no final
+        </label>
+        <label className="mt-3 block text-lg font-bold">
+          Limite da conta (opcional)
+          <input
+            inputMode="decimal"
+            placeholder="Sem limite"
+            value={form.limite_conta == null ? "" : String(form.limite_conta)}
+            onChange={(e) => {
+              const v = e.target.value.replace(",", ".").trim();
+              const n = Number(v);
+              setForm({ ...form, limite_conta: v === "" || !Number.isFinite(n) ? null : n });
+              setSalvo(false);
+            }}
+            className={`mt-1 ${campo}`}
+          />
+        </label>
+      </div>
       {erro && <p className="text-lg font-bold text-destructive">{erro}</p>}
       <button
         disabled={!chave.ok}
@@ -467,6 +504,9 @@ function EditarDados({ barraca }: { barraca: BarracaAdmin }) {
                 cidade: form.cidade,
                 whatsapp_suporte: form.whatsapp_suporte,
                 pin: form.pin,
+                servico_percentual: form.servico_percentual,
+                permite_pagar_final: form.permite_pagar_final,
+                limite_conta: form.limite_conta,
               },
             },
           });
@@ -496,8 +536,8 @@ function interpretar(texto: string): LinhaImportada[] {
     .map((l) => l.trim())
     .filter(Boolean)
     .map((linha) => {
-      const partes = (linha.includes("\t") ? linha.split("\t") : linha.split(";")).map(
-        (p) => p.trim(),
+      const partes = (linha.includes("\t") ? linha.split("\t") : linha.split(";")).map((p) =>
+        p.trim(),
       );
       const [categoria = "", nome = "", precoBruto = ""] = partes;
       const limpo = precoBruto.replace(/[^0-9,.-]/g, "").replace(",", ".");
@@ -533,8 +573,8 @@ function ImportarCardapio({ barracaId }: { barracaId: string }) {
       <section className="card-praia grid gap-3 p-4">
         <h2 className="text-2xl font-extrabold">Importar cardápio</h2>
         <p className="text-base text-muted-foreground">
-          Uma linha por item, no formato: categoria; nome do item; preço.
-          Também aceita separação por tabulação (colado de uma planilha).
+          Uma linha por item, no formato: categoria; nome do item; preço. Também aceita separação
+          por tabulação (colado de uma planilha).
         </p>
         <textarea
           value={texto}
@@ -564,17 +604,14 @@ function ImportarCardapio({ barracaId }: { barracaId: string }) {
       <h2 className="text-2xl font-extrabold">Conferir cardápio</h2>
       <p className="text-base text-muted-foreground">
         {linhas.length} item(ns) interpretado(s)
-        {paraRevisar ? ` · ${paraRevisar} para revisar` : ""}. Nada é salvo sem
-        a sua confirmação.
+        {paraRevisar ? ` · ${paraRevisar} para revisar` : ""}. Nada é salvo sem a sua confirmação.
       </p>
 
       <div className="grid gap-3">
         {linhas.map((l, i) => (
           <div
             key={i}
-            className={`card-praia grid gap-2 p-3 ${
-              l.revisar ? "border-destructive" : ""
-            }`}
+            className={`card-praia grid gap-2 p-3 ${l.revisar ? "border-destructive" : ""}`}
           >
             <div className="flex flex-wrap gap-2">
               <input
@@ -593,9 +630,7 @@ function ImportarCardapio({ barracaId }: { barracaId: string }) {
                 value={l.nome}
                 onChange={(e) =>
                   setLinhas((atual) =>
-                    atual!.map((x, j) =>
-                      j === i ? validar({ ...x, nome: e.target.value }) : x,
-                    ),
+                    atual!.map((x, j) => (j === i ? validar({ ...x, nome: e.target.value }) : x)),
                   )
                 }
                 aria-label={`Nome da linha ${i + 1}`}
@@ -605,18 +640,14 @@ function ImportarCardapio({ barracaId }: { barracaId: string }) {
                 value={l.preco}
                 onChange={(e) =>
                   setLinhas((atual) =>
-                    atual!.map((x, j) =>
-                      j === i ? validar({ ...x, preco: e.target.value }) : x,
-                    ),
+                    atual!.map((x, j) => (j === i ? validar({ ...x, preco: e.target.value }) : x)),
                   )
                 }
                 aria-label={`Preço da linha ${i + 1}`}
                 className={`${campo} w-28 flex-none`}
               />
               <button
-                onClick={() =>
-                  setLinhas((atual) => atual!.filter((_, j) => j !== i))
-                }
+                onClick={() => setLinhas((atual) => atual!.filter((_, j) => j !== i))}
                 className="btn-base border-2 border-border bg-card text-destructive"
               >
                 Tirar
@@ -657,10 +688,7 @@ function ImportarCardapio({ barracaId }: { barracaId: string }) {
         >
           Salvar no cardápio
         </button>
-        <button
-          onClick={() => setLinhas(null)}
-          className="btn-base border-2 border-border bg-card"
-        >
+        <button onClick={() => setLinhas(null)} className="btn-base border-2 border-border bg-card">
           Voltar e editar o texto
         </button>
       </div>

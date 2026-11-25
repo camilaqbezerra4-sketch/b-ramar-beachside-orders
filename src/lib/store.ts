@@ -2,12 +2,16 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   acaoPainel,
+  avisarContaPaga,
+  avisarServicoPago,
   carregarCardapio,
   carregarHistorico,
   carregarPainel,
   entrarPainel,
   enviarPedido,
+  pixDoServico,
   sairPainel,
+  situacaoMesa,
   situacaoPedido,
   type AcaoPainel,
   type EntradaPedido,
@@ -15,12 +19,12 @@ import {
 } from "./boramar.functions";
 import type {
   Barraca,
-  FormaPagamento,
   Garcom,
   LiberacaoMesa,
   Mesa,
   Pedido,
   Produto,
+  Servico,
   StatusPedido,
 } from "./types";
 
@@ -50,6 +54,7 @@ export interface DadosBarraca {
   produtos: Produto[];
   pedidos: Pedido[];
   liberacoes: LiberacaoMesa[];
+  servicos: Servico[];
 }
 
 const barracaVazia: Barraca = {
@@ -61,6 +66,8 @@ const barracaVazia: Barraca = {
   whatsapp_suporte: "",
   ativa: true,
   criado_em: new Date().toISOString(),
+  servico_percentual: 0,
+  permite_pagar_final: true,
 };
 
 const estadoInicial: DadosBarraca = {
@@ -73,6 +80,7 @@ const estadoInicial: DadosBarraca = {
   produtos: [],
   pedidos: [],
   liberacoes: [],
+  servicos: [],
 };
 
 let estado: DadosBarraca = estadoInicial;
@@ -109,6 +117,7 @@ async function carregar() {
     produtos: r.produtos,
     pedidos: r.pedidos,
     liberacoes: r.liberacoes,
+    servicos: r.servicos,
   });
   assinarSinais(r.barraca.id);
 }
@@ -264,6 +273,22 @@ export const removerGarcom = (garcomId: string) => agir({ tipo: "removerGarcom",
 
 export const alternarQrCodeMesa = (mesaId: string) => agir({ tipo: "alternarQrCode", mesaId });
 
+/** Abre a conta da mesa: este e os próximos pedidos "pagar no final" vão para a cozinha. */
+export const abrirConta = (pedidoId: string) => agir({ tipo: "abrirConta", pedidoId });
+
+export const recusarConta = (pedidoId: string) => agir({ tipo: "recusarConta", pedidoId });
+
+/** Marca como paga toda a conta em aberto da mesa. */
+export const fecharConta = (mesaId: string, forma: "pix" | "cartao" | "dinheiro") =>
+  agir({ tipo: "fecharConta", mesaId, forma });
+
+export const registrarServico = (
+  mesaId: string,
+  garcomId: string | null,
+  valor: number,
+  forma: "pix" | "cartao" | "dinheiro",
+) => agir({ tipo: "registrarServico", mesaId, garcomId, valor, forma });
+
 /** Encerra o grupo atual da mesa: os próximos pedidos começam um grupo novo. */
 export const liberarMesa = (mesaId: string) => agir({ tipo: "liberarMesa", mesaId });
 
@@ -274,15 +299,15 @@ export const liberarMesa = (mesaId: string) => agir({ tipo: "liberarMesa", mesaI
 /** Pedidos dos últimos `dias` dias. Recarrega ao trocar o período. */
 export function useHistorico(dias: number) {
   const slug = slugAtivo;
-  const [pedidos, setPedidos] = useState<Pedido[] | null>(null);
+  const [dados, setDados] = useState<{ pedidos: Pedido[]; servicos: Servico[] } | null>(null);
   const [erro, setErro] = useState(false);
   useEffect(() => {
     if (!slug) return;
     let ativo = true;
     setErro(false);
     carregarHistorico({ data: { slug, dias } })
-      .then((lista) => {
-        if (ativo) setPedidos(lista);
+      .then((r) => {
+        if (ativo) setDados(r);
       })
       .catch((e) => {
         console.error("BóraMar: falha ao carregar histórico", e);
@@ -292,7 +317,12 @@ export function useHistorico(dias: number) {
       ativo = false;
     };
   }, [slug, dias]);
-  return { pedidos: pedidos ?? [], carregando: pedidos === null && !erro, erro };
+  return {
+    pedidos: dados?.pedidos ?? [],
+    servicos: dados?.servicos ?? [],
+    carregando: dados === null && !erro,
+    erro,
+  };
 }
 
 // =====================================================================
@@ -370,8 +400,8 @@ export function useSituacaoPedido(pedidoId: string, ativo: boolean) {
         const s = await situacaoPedido({ data: { id: pedidoId } });
         if (!vivo) return;
         if (s) setSituacao(s);
-        // pago (ou encerrado): não há mais o que avisar ao cliente
-        if (s && (s.pago || ["entregue", "cancelado", "expirado"].includes(s.status))) return;
+        // saiu da espera (confirmado, na conta ou encerrado): nada mais a avisar
+        if (s && s.status !== "novo") return;
       } catch {
         // sem sinal: tenta de novo
       }
@@ -385,6 +415,59 @@ export function useSituacaoPedido(pedidoId: string, ativo: boolean) {
   }, [pedidoId, ativo]);
   return situacao;
 }
+
+export interface SituacaoMesa {
+  consumo: number;
+  emAberto: number;
+  itensEmAberto: Array<{ nome: string; quantidade: number }>;
+  aguardandoAbertura: boolean;
+  fechamentoSolicitado: boolean;
+  servico: { percentual: number; sugerido: number; pago: number; pendente: number };
+}
+
+/** Conta e serviço da turma da mesa. Atualiza ao pedir `versao` nova e ao voltar ao app. */
+export function useSituacaoMesa(slug: string, mesaId: string | undefined, versao: number) {
+  const [situacao, setSituacao] = useState<SituacaoMesa | null>(null);
+  const [vez, setVez] = useState(0);
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const voltar = () => {
+      if (document.visibilityState === "visible") setVez((v) => v + 1);
+    };
+    document.addEventListener("visibilitychange", voltar);
+    return () => document.removeEventListener("visibilitychange", voltar);
+  }, []);
+  useEffect(() => {
+    if (!mesaId) return;
+    let ativo = true;
+    situacaoMesa({ data: { slug, mesa_id: mesaId } })
+      .then((s) => {
+        if (ativo) setSituacao(s);
+      })
+      .catch(() => {
+        // sem sinal: mantém o que já tinha
+      });
+    return () => {
+      ativo = false;
+    };
+  }, [slug, mesaId, versao, vez]);
+  return situacao;
+}
+
+/** O cliente avisa que pagou a conta da mesa no Pix (o caixa confere). */
+export const avisarQuePagouConta = (slug: string, mesaId: string) =>
+  avisarContaPaga({ data: { slug, mesa_id: mesaId } });
+
+/** Código Pix do serviço, direto na chave do garçom. */
+export const pixServicoDoGarcom = (slug: string, garcomId: string, valor: number) =>
+  pixDoServico({ data: { slug, garcom_id: garcomId, valor } });
+
+export const avisarQuePagouServico = (
+  slug: string,
+  mesaId: string,
+  garcomId: string,
+  valor: number,
+) => avisarServicoPago({ data: { slug, mesa_id: mesaId, garcom_id: garcomId, valor } });
 
 // =====================================================================
 // Envio de pedidos, com fila para quando a internet cai
@@ -483,7 +566,8 @@ export async function criarPedido(input: {
   garcom_id: string | null;
   origem: Pedido["origem"];
   gorjeta: number;
-  forma_pagamento?: FormaPagamento;
+  /** "final" = pôr na conta da mesa e pagar no fim */
+  forma_pagamento?: "pix" | "cartao" | "final";
   linhas: Array<{ produto: Produto; quantidade: number }>;
 }): Promise<RespostaPedido> {
   const slug = input.slug ?? slugAtivo ?? "";
@@ -532,6 +616,10 @@ export function avisoDoPedido(r: RespostaPedido): string | null {
       return "Escolha quem atendeu para registrar a caixinha.";
     case "mesa":
       return "Essa mesa não existe nesta barraca.";
+    case "limite":
+      return `Sua conta já está em ${formatarReal(res.emAberto)}. Que tal acertar antes do próximo pedido?`;
+    case "final_desligado":
+      return "Aqui o pagamento é feito na hora. Escolha Pix ou cartão.";
     case "barraca":
       return "Esta barraca não está recebendo pedidos agora.";
     default:

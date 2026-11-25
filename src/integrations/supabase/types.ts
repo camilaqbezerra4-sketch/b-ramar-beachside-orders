@@ -17,6 +17,9 @@ export type Database = {
       barracas: {
         Row: {
           ativa: boolean
+          limite_conta: number | null
+          permite_pagar_final: boolean
+          servico_percentual: number
           chave_pix: string
           cidade: string
           criado_em: string
@@ -29,6 +32,9 @@ export type Database = {
         }
         Insert: {
           ativa?: boolean
+          limite_conta?: number | null
+          permite_pagar_final?: boolean
+          servico_percentual?: number
           chave_pix?: string
           cidade?: string
           criado_em?: string
@@ -41,6 +47,9 @@ export type Database = {
         }
         Update: {
           ativa?: boolean
+          limite_conta?: number | null
+          permite_pagar_final?: boolean
+          servico_percentual?: number
           chave_pix?: string
           cidade?: string
           criado_em?: string
@@ -217,7 +226,9 @@ export type Database = {
         Row: {
           barraca_id: string
           criado_em: string
+          fechamento_solicitado_em: string | null
           forma_pagamento: string
+          na_conta: boolean
           garcom_id: string | null
           gorjeta: number
           id: string
@@ -232,7 +243,9 @@ export type Database = {
         Insert: {
           barraca_id: string
           criado_em?: string
+          fechamento_solicitado_em?: string | null
           forma_pagamento?: string
+          na_conta?: boolean
           garcom_id?: string | null
           gorjeta?: number
           id?: string
@@ -247,7 +260,9 @@ export type Database = {
         Update: {
           barraca_id?: string
           criado_em?: string
+          fechamento_solicitado_em?: string | null
           forma_pagamento?: string
+          na_conta?: boolean
           garcom_id?: string | null
           gorjeta?: number
           id?: string
@@ -326,6 +341,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      servicos: {
+        Row: {
+          barraca_id: string
+          criado_em: string
+          forma: string
+          garcom_id: string | null
+          id: string
+          mesa_id: string | null
+          situacao: string
+          updated_at: string
+          valor: number
+        }
+        Insert: {
+          barraca_id: string
+          criado_em?: string
+          forma?: string
+          garcom_id?: string | null
+          id?: string
+          mesa_id?: string | null
+          situacao?: string
+          updated_at?: string
+          valor: number
+        }
+        Update: {
+          barraca_id?: string
+          criado_em?: string
+          forma?: string
+          garcom_id?: string | null
+          id?: string
+          mesa_id?: string | null
+          situacao?: string
+          updated_at?: string
+          valor?: number
+        }
+        Relationships: []
       }
     }
     Views: {

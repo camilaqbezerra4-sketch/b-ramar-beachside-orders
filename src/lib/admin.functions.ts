@@ -69,6 +69,10 @@ export interface BarracaAdmin {
   whatsapp_suporte: string;
   pin: string;
   ativa: boolean;
+  /** 0 = não cobra serviço */
+  servico_percentual: number;
+  permite_pagar_final: boolean;
+  limite_conta: number | null;
   mesas: number;
 }
 
@@ -78,17 +82,20 @@ export const listarBarracas = createServerFn({ method: "GET" }).handler(async ()
   const sb = await admin();
   const { data, error } = await sb
     .from("barracas")
-    .select("id, slug, nome, cidade, chave_pix, whatsapp_suporte, pin, ativa")
+    .select(
+      "id, slug, nome, cidade, chave_pix, whatsapp_suporte, pin, ativa, servico_percentual, permite_pagar_final, limite_conta",
+    )
     .order("criado_em");
   if (error) throw error;
   const { data: mesas } = await sb.from("mesas").select("barraca_id");
   const contagem = new Map<string, number>();
-  for (const m of mesas ?? [])
-    contagem.set(m.barraca_id, (contagem.get(m.barraca_id) ?? 0) + 1);
+  for (const m of mesas ?? []) contagem.set(m.barraca_id, (contagem.get(m.barraca_id) ?? 0) + 1);
   return {
     liberado: true as const,
     barracas: (data ?? []).map((b) => ({
       ...(b as Omit<BarracaAdmin, "mesas">),
+      servico_percentual: Number(b.servico_percentual ?? 0),
+      limite_conta: b.limite_conta == null ? null : Number(b.limite_conta),
       mesas: contagem.get(b.id) ?? 0,
     })),
   };
@@ -139,10 +146,7 @@ export const criarBarraca = createServerFn({ method: "POST" })
 
 export const atualizarBarraca = createServerFn({ method: "POST" })
   .inputValidator(
-    (data: {
-      id: string;
-      patch: Partial<Omit<BarracaAdmin, "id" | "mesas">>;
-    }) => data,
+    (data: { id: string; patch: Partial<Omit<BarracaAdmin, "id" | "mesas">> }) => data,
   )
   .handler(async ({ data }) => {
     await exigirAdmin();
