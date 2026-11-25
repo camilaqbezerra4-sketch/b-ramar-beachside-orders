@@ -646,7 +646,13 @@ function CardRodada({
                 : "bg-success text-success-foreground"
           }`}
         >
-          {pronta ? "Pronto" : rodada.emPreparo.length ? "Em preparo" : "Pago, a preparar"}
+          {pronta
+            ? "Pronto"
+            : rodada.emPreparo.length
+              ? "Em preparo"
+              : rodada.pedidos.every((p) => p.pago)
+                ? "Pago, a preparar"
+                : "A preparar"}
         </span>
       </div>
 
