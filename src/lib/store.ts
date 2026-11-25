@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   acaoPainel,
   avisarContaPaga,
+  avisarPixDoPedido,
   avisarServicoPago,
   carregarCardapio,
   carregarHistorico,
@@ -457,6 +458,12 @@ export function useSituacaoMesa(slug: string, mesaId: string | undefined, versao
 }
 
 /** O cliente avisa que pagou a conta da mesa no Pix (o caixa confere). */
+/** O cliente avisa que pagou um pedido no Pix (o caixa vê "pagou no Pix · confira"). */
+export const avisarQuePagouPedido = (pedidoId: string) =>
+  avisarPixDoPedido({ data: { id: pedidoId } }).catch(() => {
+    // sem sinal: o caixa confere pelo banco do mesmo jeito
+  });
+
 export const avisarQuePagouConta = (slug: string, mesaId: string) =>
   avisarContaPaga({ data: { slug, mesa_id: mesaId } });
 

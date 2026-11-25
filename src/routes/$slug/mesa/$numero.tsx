@@ -6,6 +6,7 @@ import { SuporteWhatsApp } from "@/components/SuporteWhatsApp";
 import {
   assinarFila,
   avisarQuePagouConta,
+  avisarQuePagouPedido,
   avisarQuePagouServico,
   avisoDoPedido,
   criarPedido,
@@ -480,6 +481,7 @@ function ClientePage() {
           />
           <button
             onClick={() => {
+              if (pedidoId && !pendente) void avisarQuePagouPedido(pedidoId);
               setEtapa("fim");
               setCarrinho({});
               atualizarMesa();

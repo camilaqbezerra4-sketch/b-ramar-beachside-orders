@@ -438,6 +438,17 @@ function PainelPage() {
                           aguardando cartão
                         </span>
                       )}
+                      {!p.na_conta &&
+                        p.forma_pagamento === "pix" &&
+                        (p.fechamento_solicitado_em ? (
+                          <span className="rounded-full bg-success px-3 py-1 text-sm font-extrabold text-success-foreground">
+                            pagou no Pix · confira
+                          </span>
+                        ) : (
+                          <span className="rounded-full bg-primary px-3 py-1 text-sm font-extrabold text-primary-foreground">
+                            Pix
+                          </span>
+                        ))}
                     </h2>
                     <span className="text-base text-muted-foreground">
                       há {minutosDesde(p.criado_em)} min · Garçom: {nomeGarcom(p.garcom_id)}

@@ -571,6 +571,23 @@ export const situacaoMesa = createServerFn({ method: "GET" })
     };
   });
 
+/** O cliente avisa que pagou um pedido no Pix ("Pronto, paguei"); o caixa confere. */
+export const avisarPixDoPedido = createServerFn({ method: "POST" })
+  .inputValidator((data: { id: string }) => ({ id: String(data?.id ?? "") }))
+  .handler(async ({ data }) => {
+    if (!ehUuid(data.id)) return { ok: false as const };
+    const sb = await db();
+    const { error } = await sb
+      .from("pedidos")
+      .update({ fechamento_solicitado_em: new Date().toISOString() })
+      .eq("id", data.id)
+      .eq("status", "novo")
+      .eq("pago", false)
+      .eq("na_conta", false);
+    if (error) throw error;
+    return { ok: true as const };
+  });
+
 /** O cliente avisa que pagou a conta no Pix; o caixa confere e confirma. */
 export const avisarContaPaga = createServerFn({ method: "POST" })
   .inputValidator((data: { slug: string; mesa_id: string }) => ({
