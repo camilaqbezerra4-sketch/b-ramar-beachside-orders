@@ -1551,8 +1551,10 @@ function FecharMesa({ mesaId, aoFechar }: { mesaId: string; aoFechar: () => void
   const mesa = mesas.find((m) => m.id === mesaId);
   const r = resumoDaMesa(pedidos, liberacoes, servicos, mesaId, barraca.servico_percentual);
   const [mostrarQrConta, setMostrarQrConta] = useState(false);
+  // garçom que atendeu a turma (se algum pedido disse); senão, ninguém marcado
+  const doGrupo = gruposDaMesa(pedidos, liberacoes, mesaId).atual.pedidos;
   const [garcomId, setGarcomId] = useState(
-    r.contaPedidos.find((p) => p.garcom_id)?.garcom_id ?? garcons[0]?.id ?? "",
+    [...doGrupo].reverse().find((p) => p.garcom_id)?.garcom_id ?? "",
   );
   const garcom = garcons.find((g) => g.id === garcomId);
   const [mostrarQrServico, setMostrarQrServico] = useState(false);
@@ -1640,7 +1642,7 @@ function FecharMesa({ mesaId, aoFechar }: { mesaId: string; aoFechar: () => void
             </p>
             <p className="mt-3 text-lg font-bold">Quem atendeu?</p>
             <div className="mt-2 flex flex-wrap gap-2">
-              {garcons.map((g) => (
+              {[...garcons, { id: "equipe", nome: "Equipe", chave_pix: "" }].map((g) => (
                 <button
                   key={g.id}
                   onClick={() => setGarcomId(g.id)}
@@ -1676,7 +1678,11 @@ function FecharMesa({ mesaId, aoFechar }: { mesaId: string; aoFechar: () => void
                 )}
               </>
             )}
-            <p className="mt-4 text-lg font-bold">Recebeu o serviço? Toca em como foi:</p>
+            <p className="mt-4 text-lg font-bold">
+              {garcomId
+                ? "Recebeu o serviço? Toca em como foi:"
+                : "Primeiro, toca em quem atendeu."}
+            </p>
             <div className="mt-2 grid grid-cols-3 gap-2">
               {(
                 [
@@ -1687,10 +1693,15 @@ function FecharMesa({ mesaId, aoFechar }: { mesaId: string; aoFechar: () => void
               ).map(([forma, rotulo]) => (
                 <button
                   key={forma}
-                  disabled={salvando}
+                  disabled={salvando || !garcomId}
                   onClick={() =>
                     void fazer(() =>
-                      registrarServico(mesaId, garcomId || null, r.servicoPendente, forma),
+                      registrarServico(
+                        mesaId,
+                        garcomId === "equipe" ? null : garcomId,
+                        r.servicoPendente,
+                        forma,
+                      ),
                     )
                   }
                   className="btn-base bg-success text-success-foreground"
