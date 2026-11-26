@@ -773,7 +773,9 @@ function AbaMesas({
         </button>
         <h1 className="mt-3 text-3xl font-bold">Mesa {mesa.numero}</h1>
         <p className="mt-1 text-lg text-muted-foreground">
-          {atual.inicio ? `Ocupada desde ${hora(atual.inicio)}` : "Livre no momento"}
+          {atual.pedidos.length
+            ? `Ocupada desde ${hora(atual.pedidos.map((p) => p.criado_em).sort()[0] ?? "")}`
+            : "Livre no momento"}
         </p>
 
         <div className="mt-4 grid gap-3">
@@ -982,7 +984,7 @@ function AbaMesas({
                   <p className="text-xl font-bold">Mesa {m.numero}</p>
                   <p className="text-base text-muted-foreground">
                     {ocupada
-                      ? `Ocupada desde ${hora(atual.inicio!)} · ${formatarReal(atual.total)}`
+                      ? `Ocupada desde ${hora(atual.pedidos.map((p) => p.criado_em).sort()[0] ?? "")} · ${formatarReal(atual.total)}`
                       : "Livre"}
                   </p>
                   {conta.emAberto > 0 && (
