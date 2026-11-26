@@ -655,8 +655,8 @@ function CardRodada({
             pronta
               ? "bg-success text-success-foreground"
               : rodada.emPreparo.length
-                ? "bg-primary text-primary-foreground"
-                : "bg-success text-success-foreground"
+                ? "bg-primary/10 text-primary"
+                : "bg-muted text-foreground"
           }`}
         >
           {pronta
@@ -712,25 +712,25 @@ function CardRodada({
         {rodada.aguardando.length > 0 && (
           <button
             onClick={() => void iniciarPreparo()}
-            className="btn-base bg-primary text-primary-foreground"
+            className="btn-base w-full bg-primary text-primary-foreground"
           >
-            Iniciar preparo
+            Começar a preparar
           </button>
         )}
         {rodada.emPreparo.length > 0 && (
           <button
             onClick={() => void marcarPronto()}
-            className="btn-base bg-success text-success-foreground"
+            className="btn-base w-full bg-accent text-accent-foreground"
           >
-            Pronto
+            Ficou pronto? Toque aqui
           </button>
         )}
         {rodada.prontos.length > 0 && (
           <button
             onClick={() => void entregar()}
-            className="btn-base bg-success px-8 py-5 text-xl text-success-foreground"
+            className="btn-base w-full bg-primary py-4 text-lg text-primary-foreground"
           >
-            Entregue
+            Levou pra mesa? Toque aqui
           </button>
         )}
       </div>

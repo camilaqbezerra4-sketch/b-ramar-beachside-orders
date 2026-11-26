@@ -1,3 +1,4 @@
+import { CATEGORIAS_BASE } from "./modelo-cardapio";
 import type { GrupoOpcao } from "./opcoes";
 // Tipos espelhando o schema previsto no Supabase.
 export type Categoria = string;
@@ -115,6 +116,12 @@ export function categoriasDe(produtos: Produto[]): Categoria[] {
   const vistas: Categoria[] = [];
   for (const p of produtos) if (!vistas.includes(p.categoria)) vistas.push(p.categoria);
   return vistas.length ? vistas : CATEGORIAS;
+}
+
+/** Categorias da barraca + as do modelo de Recife que ela ainda não usa (para sugerir). */
+export function categoriasComSugestoes(produtos: Produto[]): Categoria[] {
+  const proprias = [...new Set(produtos.map((p) => p.categoria))];
+  return [...proprias, ...CATEGORIAS_BASE.filter((c) => !proprias.includes(c))];
 }
 
 /** slug seguro: minúsculas, números e hífen. */

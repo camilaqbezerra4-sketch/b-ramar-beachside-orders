@@ -851,6 +851,7 @@ export type AcaoPainel =
   | { tipo: "moverProduto"; produtoId: string; direcao: -1 | 1 }
   | { tipo: "criarGarcom"; nome: string; chavePix: string }
   | { tipo: "removerGarcom"; garcomId: string }
+  | { tipo: "editarGarcom"; garcomId: string; nome: string; chavePix: string }
   | { tipo: "alternarQrCode"; mesaId: string }
   | { tipo: "liberarMesa"; mesaId: string }
   | { tipo: "trocarMesa"; de: string; para: string; juntar: boolean }
@@ -1019,6 +1020,18 @@ export const acaoPainel = createServerFn({ method: "POST" })
           await sb
             .from("garcons")
             .insert({ barraca_id: bid, nome, chave_pix: texto(a.chavePix, 120) }),
+        );
+        break;
+      }
+      case "editarGarcom": {
+        const nome = texto(a.nome, 60);
+        if (!nome || !ehUuid(a.garcomId)) throw new Error("Dados inválidos.");
+        conferir(
+          await sb
+            .from("garcons")
+            .update({ nome, chave_pix: texto(a.chavePix, 120) })
+            .eq("id", a.garcomId)
+            .eq("barraca_id", bid),
         );
         break;
       }

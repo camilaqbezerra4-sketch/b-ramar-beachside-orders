@@ -126,7 +126,7 @@ function GarcomPage() {
                 onClick={() => void atualizarStatus(p.id, "entregue")}
                 className="btn-base bg-primary text-primary-foreground"
               >
-                Entregue
+                Levou? Toque aqui
               </button>
             </div>
           ))}

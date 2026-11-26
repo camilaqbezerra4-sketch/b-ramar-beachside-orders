@@ -4,19 +4,21 @@ import {
   formatarReal,
   criarGarcom,
   criarProduto,
+  editarGarcom,
   moverProduto,
   removerGarcom,
   removerProduto,
   renomearCategoria,
   useDados,
 } from "@/lib/store";
-import { categoriasDe, type Produto } from "@/lib/types";
+import { categoriasComSugestoes, categoriasDe, type Produto } from "@/lib/types";
 import { CampoChavePix } from "@/components/CampoChavePix";
 import { analisarChavePix } from "@/lib/chave-pix";
 import { EditorOpcoes } from "@/components/EditorOpcoes";
 
 export function AbaCardapio({ produtos }: { produtos: Produto[] }) {
   const categorias = categoriasDe(produtos);
+  const opcoesCategoria = categoriasComSugestoes(produtos);
   const [nome, setNome] = useState("");
   const [preco, setPreco] = useState("");
   const [categoria, setCategoria] = useState(categorias[0] ?? "Bebidas");
@@ -53,7 +55,7 @@ export function AbaCardapio({ produtos }: { produtos: Produto[] }) {
             aria-label="Categoria"
             className="flex-1 rounded-xl border border-border bg-background px-3 py-3 text-lg font-semibold"
           >
-            {categorias.map((c) => (
+            {opcoesCategoria.map((c) => (
               <option key={c} value={c}>
                 {c}
               </option>
@@ -279,26 +281,88 @@ export function AbaEquipe() {
 
       <div className="mt-4 grid gap-3">
         {garcons.map((g) => (
-          <div key={g.id} className="card-praia flex items-center gap-3 p-4">
-            <div className="min-w-0 flex-1">
-              <p className="text-xl font-bold">{g.nome}</p>
-              <p className="text-base text-muted-foreground">{g.chave_pix || "sem chave Pix"}</p>
-            </div>
-            <button
-              onClick={() => {
-                if (window.confirm(`Remover ${g.nome} da equipe?`)) void removerGarcom(g.id);
-              }}
-              className="btn-base border border-border bg-card text-destructive"
-            >
-              Remover
-            </button>
-          </div>
+          <CartaoGarcom key={g.id} garcom={g} />
         ))}
         {garcons.length === 0 && (
           <p className="text-lg text-muted-foreground">Nenhum garçom cadastrado.</p>
         )}
       </div>
     </>
+  );
+}
+
+/** Um garçom da equipe: ver, editar nome e chave Pix, ou remover. */
+function CartaoGarcom({ garcom: g }: { garcom: { id: string; nome: string; chave_pix: string } }) {
+  const [editando, setEditando] = useState(false);
+  const [nome, setNome] = useState(g.nome);
+  const [pix, setPix] = useState(g.chave_pix);
+  const chave = analisarChavePix(pix);
+  const podeSalvar = nome.trim().length > 0 && chave.ok;
+
+  if (editando)
+    return (
+      <div className="card-praia grid gap-3 p-4">
+        <input
+          value={nome}
+          onChange={(e) => setNome(e.target.value)}
+          aria-label={`Nome de ${g.nome}`}
+          className="w-full rounded-xl border border-border bg-background px-3 py-3 text-lg font-semibold"
+        />
+        <CampoChavePix valor={pix} aoMudar={setPix} rotulo="Chave Pix do garçom" />
+        <div className="flex flex-wrap gap-2">
+          <button
+            disabled={!podeSalvar}
+            onClick={() => {
+              void editarGarcom(g.id, nome.trim(), chave.valor).then((ok) => {
+                if (ok) setEditando(false);
+              });
+            }}
+            className="btn-base flex-1 bg-accent text-accent-foreground disabled:opacity-50"
+          >
+            Salvar
+          </button>
+          <button
+            onClick={() => {
+              setNome(g.nome);
+              setPix(g.chave_pix);
+              setEditando(false);
+            }}
+            className="btn-base border border-border bg-card"
+          >
+            Cancelar
+          </button>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          A chave nova vale para os próximos serviços. O que já foi pago continua registrado.
+        </p>
+      </div>
+    );
+
+  return (
+    <div className="card-praia flex flex-wrap items-center gap-3 p-4">
+      <div className="min-w-0 flex-1">
+        <p className="text-xl font-bold">{g.nome}</p>
+        <p className="text-base text-muted-foreground">{g.chave_pix || "sem chave Pix"}</p>
+      </div>
+      <button
+        onClick={() => {
+          setNome(g.nome);
+          setPix(g.chave_pix);
+          setEditando(true);
+        }}
+        className="btn-base border border-border bg-card"
+      >
+        Editar
+      </button>
+      <button
+        onClick={() => {
+          if (window.confirm(`Remover ${g.nome} da equipe?`)) void removerGarcom(g.id);
+        }}
+        className="btn-base border border-border bg-card text-destructive"
+      >
+        Remover
+      </button>
+    </div>
   );
 }
 

@@ -1,3 +1,4 @@
+import { MODELO_RECIFE } from "@/lib/modelo-cardapio";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { AppHeader } from "@/components/AppHeader";
@@ -584,6 +585,20 @@ function ImportarCardapio({ barracaId }: { barracaId: string }) {
           placeholder={"Bebidas; Água de coco; 8,00\nPorções; Isca de peixe; 65,00"}
           className={campo}
         />
+        <button
+          type="button"
+          onClick={() => {
+            if (texto.trim() && !window.confirm("Trocar o texto atual pelo modelo de Recife?")) return;
+            setTexto(MODELO_RECIFE);
+          }}
+          className="btn-base border border-border bg-card"
+        >
+          Usar modelo de barraca de Recife
+        </button>
+        <p className="text-sm text-muted-foreground">
+          O modelo traz categorias e itens comuns com preços médios de referência. Apague o que a
+          barraca não vende e ajuste os preços antes de salvar. Itens com “?” estão sem preço.
+        </p>
         <button
           onClick={() => {
             const l = interpretar(texto);

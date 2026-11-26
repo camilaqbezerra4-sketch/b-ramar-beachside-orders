@@ -293,6 +293,8 @@ export const criarGarcom = (nome: string, chavePix: string) =>
   agir({ tipo: "criarGarcom", nome, chavePix });
 
 export const removerGarcom = (garcomId: string) => agir({ tipo: "removerGarcom", garcomId });
+export const editarGarcom = (garcomId: string, nome: string, chavePix: string) =>
+  agir({ tipo: "editarGarcom", garcomId, nome, chavePix });
 
 export const alternarQrCodeMesa = (mesaId: string) => agir({ tipo: "alternarQrCode", mesaId });
 
